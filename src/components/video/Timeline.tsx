@@ -1,12 +1,6 @@
 // src/components/video/Timeline.tsx
 import React, { useState } from 'react'
-import {
-  DndProvider,
-  useDrag,
-  useDrop,
-  DragSourceMonitor,
-  DropTargetMonitor,
-} from 'react-dnd'
+import { DndProvider, useDrag, useDrop, DragSourceMonitor } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 
 interface TimelineItem {
@@ -29,7 +23,7 @@ const DraggableItem: React.FC<DraggableItemProps> = ({
 
   const [, drop] = useDrop({
     accept: 'TIMELINE_ITEM',
-    hover: (draggedItem: { index: number }, monitor: DropTargetMonitor) => {
+    hover: (draggedItem: { index: number }) => {
       if (!ref.current) {
         return
       }

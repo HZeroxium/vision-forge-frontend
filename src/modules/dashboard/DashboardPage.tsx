@@ -5,12 +5,13 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchDashboardData } from './dashboardAPI'
 import VideoCard from '@components/dashboard/VideoCard'
 import StatsChart from '@components/dashboard/StatsChart'
+import { Video } from './dashboardSlice'
 
 export default function DashboardModulePage() {
-  const { data, isLoading, error } = useQuery(
-    ['dashboardData'],
-    fetchDashboardData
-  )
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['dashboardData'],
+    queryFn: fetchDashboardData,
+  })
 
   if (isLoading) return <div>Loading dashboard...</div>
   if (error) return <div>Error loading dashboard.</div>
@@ -18,7 +19,7 @@ export default function DashboardModulePage() {
   return (
     <DashboardLayout>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {data.videos.map((video: any, idx: number) => (
+        {data.videos.map((video: Video, idx: number) => (
           <VideoCard
             key={idx}
             thumbnail={video.thumbnail}

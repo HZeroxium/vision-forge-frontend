@@ -7,7 +7,7 @@ import VideoPreview from '@components/video/VideoPreview'
 
 export default function VideoCreator() {
   const [script, setScript] = useState('')
-  const [videoUrl, setVideoUrl] = useState('<TODO: Video URL>')
+  const [videoUrl] = useState('<TODO: Video URL>')
 
   const handleGenerateVideo = async () => {
     // <TODO>: Call API to generate video from script

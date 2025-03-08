@@ -1,7 +1,7 @@
 // src/services/uploadService.ts
 import api from './api'
 
-export const uploadFile = async (fileData: FormData): Promise<any> => {
+export const uploadFile = async (fileData: FormData): Promise<unknown> => {
   // If using pre-signed URL approach, modify accordingly.
   const response = await api.post('/upload', fileData, {
     headers: {

@@ -22,7 +22,7 @@ export const uploadVideo = async (videoData: FormData): Promise<Video> => {
   return response.data
 }
 
-export const updateVideo = async (id: string, data: any): Promise<Video> => {
+export const updateVideo = async (id: string, data: Video): Promise<Video> => {
   const response = await api.put(`/videos/${id}`, data) // <TODO>: Adjust endpoint
   return response.data
 }

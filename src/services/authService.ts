@@ -1,4 +1,5 @@
 // src/services/authService.ts
+import { User } from '@/modules/auth/authSlice'
 import api from './api'
 
 export interface LoginCredentials {
@@ -7,7 +8,7 @@ export interface LoginCredentials {
 }
 
 export interface AuthResponse {
-  user: any // Replace with actual user type
+  user: User // Replace with actual user type
   token: string
 }
 
@@ -18,7 +19,7 @@ export const login = async (
   return response.data
 }
 
-export const register = async (data: any): Promise<AuthResponse> => {
+export const register = async (data: User): Promise<AuthResponse> => {
   const response = await api.post('/auth/register', data) // <TODO>: Update endpoint if needed
   return response.data
 }

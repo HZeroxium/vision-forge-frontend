@@ -6,7 +6,7 @@ export const fetchPublishingData = async () => {
   return response.data
 }
 
-export const publishVideo = async (videoId: string, data: any) => {
+export const publishVideo = async (videoId: string, data: unknown) => {
   const response = await api.post(`/publishing/${videoId}`, data) // <TODO>: Adjust endpoint
   return response.data
 }

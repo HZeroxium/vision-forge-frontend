@@ -1,9 +1,20 @@
 // src/modules/dashboard/dashboardSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
+export interface Video {
+  id: string
+  thumbnail: string
+  title: string
+  status: string
+}
+
+interface Stats {
+  [key: string]: number
+}
+
 interface DashboardState {
-  videos: any[]
-  stats: any
+  videos: Video[]
+  stats: Stats
 }
 
 const initialState: DashboardState = {

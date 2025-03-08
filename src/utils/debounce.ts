@@ -1,5 +1,5 @@
 // src/utils/debounce.ts
-export function debounce<F extends (...args: any[]) => void>(
+export function debounce<F extends (...args: unknown[]) => void>(
   func: F,
   delay: number
 ): (...args: Parameters<F>) => void {

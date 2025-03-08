@@ -1,8 +1,9 @@
 // src/store/videoSlice.ts
+import { Video } from '@/modules/dashboard/dashboardSlice'
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
 interface VideoState {
-  videos: any[]
+  videos: Video[]
   loading: boolean
   error: string | null
 }
@@ -21,7 +22,7 @@ const videoSlice = createSlice({
       state.loading = true
       state.error = null
     },
-    fetchVideosSuccess(state, action: PayloadAction<any[]>) {
+    fetchVideosSuccess(state, action: PayloadAction<Video[]>) {
       state.videos = action.payload
       state.loading = false
     },

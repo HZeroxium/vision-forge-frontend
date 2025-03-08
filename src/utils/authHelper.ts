@@ -1,8 +1,13 @@
 // src/utils/authHelper.ts
 import { jwtDecode } from 'jwt-decode'
 
+interface JwtPayload {
+  exp: number
+  [key: string]: string | number | boolean | object | null
+}
+
 export function getTokenExpiration(token: string): number {
-  const decoded: any = jwtDecode(token)
+  const decoded: JwtPayload = jwtDecode<JwtPayload>(token)
   return decoded.exp
 }
 

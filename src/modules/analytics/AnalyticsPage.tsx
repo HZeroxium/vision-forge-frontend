@@ -6,10 +6,10 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchAnalyticsData } from './analyticsAPI'
 
 export default function AnalyticsPage() {
-  const { data, isLoading, error } = useQuery(
-    ['analyticsData'],
-    fetchAnalyticsData
-  )
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['analyticsData'],
+    queryFn: fetchAnalyticsData,
+  })
 
   if (isLoading) return <div>Loading analytics...</div>
   if (error) return <div>Error loading analytics.</div>

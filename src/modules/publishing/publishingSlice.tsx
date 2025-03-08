@@ -1,8 +1,9 @@
 // src/modules/publishing/publishingSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+import { Video } from '../dashboard/dashboardSlice'
 
 interface PublishingState {
-  videos: any[]
+  videos: Video[]
 }
 
 const initialState: PublishingState = {
@@ -13,7 +14,7 @@ const publishingSlice = createSlice({
   name: 'publishing',
   initialState,
   reducers: {
-    setPublishingVideos(state, action: PayloadAction<any[]>) {
+    setPublishingVideos(state, action: PayloadAction<Video[]>) {
       state.videos = action.payload
     },
   },
