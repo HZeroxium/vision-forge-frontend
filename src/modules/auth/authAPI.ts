@@ -1,13 +1,16 @@
 // src/modules/auth/authAPI.ts
-import api from "../../services/api";
+// src/modules/auth/authAPI.ts
+import api from '@services/api'
 
 export const loginAPI = async (credentials: {
-  email: string;
-  password: string;
+  email: string
+  password: string
 }) => {
-  // TODO: Replace with actual endpoint URL
-  const response = await api.post("/auth/login", credentials);
-  return response.data;
-};
+  const response = await api.post('/auth/login', credentials) // <TODO>: Adjust endpoint
+  return response.data
+}
 
-// Thêm các API khác: register, refreshToken, ...
+export const registerAPI = async (data: any) => {
+  const response = await api.post('/auth/register', data) // <TODO>: Adjust endpoint
+  return response.data
+}
