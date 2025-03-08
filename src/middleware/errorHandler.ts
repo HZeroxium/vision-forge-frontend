@@ -1,12 +1,18 @@
 // src/middleware/errorHandler.ts
 import { NextApiRequest, NextApiResponse } from 'next'
-import Error from 'next/error'
+
+interface Error {
+  statusCode?: number
+  message?: string
+}
 
 export default function errorHandler(
   err: Error,
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  console.error(err)
-  res.status(500).json({ message: 'Internal Server Error' })
+  console.error('Error:', err)
+  res
+    .status(err.statusCode || 500)
+    .json({ error: err.message || 'Internal Server Error' })
 }
