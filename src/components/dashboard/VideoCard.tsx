@@ -1,13 +1,25 @@
 // src/components/dashboard/VideoCard.tsx
-import React from "react";
+import Image from 'next/image'
+import React from 'react'
 
-const VideoCard: React.FC = () => {
+interface VideoCardProps {
+  thumbnail: string
+  title: string
+  status: string
+}
+
+const VideoCard: React.FC<VideoCardProps> = ({ thumbnail, title, status }) => {
   return (
-    <div className="border rounded p-4">
-      {/* TODO: Display video thumbnail, status, and other info */}
-      Video Card Placeholder
+    <div className="border rounded shadow p-4">
+      <Image
+        src={thumbnail}
+        alt={title}
+        className="w-full h-40 object-cover rounded"
+      />
+      <h3 className="mt-2 text-xl font-semibold">{title}</h3>
+      <p className="text-sm text-gray-500">{status}</p>
     </div>
-  );
-};
+  )
+}
 
-export default VideoCard;
+export default VideoCard
