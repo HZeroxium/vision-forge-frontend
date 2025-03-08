@@ -1,9 +1,9 @@
 // src/app/video-editor/page.tsx
 import React, { useState } from 'react'
-import DashboardLayout from '../../layouts/DashboardLayout'
-import VideoPreview from '../../components/video/VideoPreview'
-import VideoEditor from '../../components/video/VideoEditor'
-import Timeline from '../../components/video/Timeline'
+import DashboardLayout from '@layouts/DashboardLayout'
+import VideoPreview from '@components/video/VideoPreview'
+import VideoEditor from '@components/video/VideoEditor'
+import Timeline from '@components/video/Timeline'
 
 export default function VideoEditorPage() {
   const [videoUrl, setVideoUrl] = useState('<TODO: Video URL>')

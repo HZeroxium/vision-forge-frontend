@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
-import '../styles/globals.css'
+import '@styles/globals.css'
 import React from 'react'
 import { Provider as ReduxProvider } from 'react-redux'
 import { QueryClientProvider } from '@tanstack/react-query'
-import store from '../store/store'
-import queryClient from '../queryClient'
+import store from '@store/store'
+import queryClient from '@/queryClient'
 import { ThemeProvider } from '@mui/material/styles'
-import theme from '../styles/theme'
+import theme from '@styles/theme'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',

@@ -1,8 +1,8 @@
 // src/app/dashboard/page.tsx
 import React from 'react'
-import DashboardLayout from '../../layouts/DashboardLayout'
-import VideoCard from '../../components/dashboard/VideoCard'
-import StatsChart from '../../components/dashboard/StatsChart'
+import DashboardLayout from '@layouts/DashboardLayout'
+import VideoCard from '@components/dashboard/VideoCard'
+import StatsChart from '@components/dashboard/StatsChart'
 
 export default function DashboardPage() {
   // Placeholder data

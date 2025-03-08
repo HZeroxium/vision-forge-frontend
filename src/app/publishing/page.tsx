@@ -1,6 +1,6 @@
 // src/app/publishing/page.tsx
 import React from 'react'
-import DashboardLayout from '../../layouts/DashboardLayout'
+import DashboardLayout from '@layouts/DashboardLayout'
 
 export default function PublishingPage() {
   return (
