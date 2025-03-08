@@ -9,7 +9,14 @@ export const loginAPI = async (credentials: {
   return response.data
 }
 
-export const registerAPI = async (data: any) => {
+export interface RegisterCredentials {
+  email: string
+  password: string
+  name?: string
+  // Add other fields your registration requires
+}
+
+export const registerAPI = async (data: RegisterCredentials) => {
   const response = await api.post('/auth/register', data) // <TODO>: Adjust endpoint
   return response.data
 }

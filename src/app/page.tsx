@@ -1,4 +1,6 @@
+'use client'
 // src/app/page.tsx
+
 import React from 'react'
 import DashboardLayout from '@layouts/DashboardLayout'
 

@@ -1,4 +1,5 @@
 // src/components/common/Modal.tsx
+'use client'
 import React from 'react'
 import { Modal as MuiModal, Box } from '@mui/material'
 

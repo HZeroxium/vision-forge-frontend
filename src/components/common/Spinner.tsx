@@ -1,4 +1,5 @@
 // src/components/common/Spinner.tsx
+'use client'
 import React from 'react'
 import { CircularProgress } from '@mui/material'
 

@@ -1,8 +1,6 @@
-import React, { useState } from 'react'
-import dynamic from 'next/dynamic'
-
-const ReactQuill = dynamic(() => import('react-quill'), { ssr: false })
-import 'react-quill/dist/quill.snow.css'
+// src/components/forms/TextEditor.tsx
+import React from 'react'
+import { RichTextEditor } from '@mantine/rte'
 
 interface TextEditorProps {
   value: string
@@ -12,7 +10,7 @@ interface TextEditorProps {
 const TextEditor: React.FC<TextEditorProps> = ({ value, onChange }) => {
   return (
     <div className="my-4">
-      <ReactQuill value={value} onChange={onChange} theme="snow" />
+      <RichTextEditor value={value} onChange={onChange} />
     </div>
   )
 }

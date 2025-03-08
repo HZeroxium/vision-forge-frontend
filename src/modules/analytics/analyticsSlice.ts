@@ -2,7 +2,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
 interface AnalyticsState {
-  data: any
+  data: unknown
 }
 
 const initialState: AnalyticsState = {
@@ -13,7 +13,7 @@ const analyticsSlice = createSlice({
   name: 'analytics',
   initialState,
   reducers: {
-    setAnalyticsData(state, action: PayloadAction<any>) {
+    setAnalyticsData(state, action: PayloadAction<unknown>) {
       state.data = action.payload
     },
   },
