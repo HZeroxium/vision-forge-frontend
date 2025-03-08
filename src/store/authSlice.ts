@@ -1,8 +1,8 @@
-// src/modules/auth/authSlice.ts
+// src/store/authSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
 interface AuthState {
-  user: any
+  user: any | null
   token: string | null
 }
 
