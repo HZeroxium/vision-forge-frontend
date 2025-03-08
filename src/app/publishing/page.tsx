@@ -1,4 +1,5 @@
 // src/app/publishing/page.tsx
+'use client'
 import React from 'react'
 import DashboardLayout from '@layouts/DashboardLayout'
 

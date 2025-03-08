@@ -1,4 +1,5 @@
 // src/app/auth/register.tsx
+'use client'
 import React from 'react'
 import AuthLayout from '@layouts/AuthLayout'
 import RegisterForm from '@components/auth/RegisterForm'

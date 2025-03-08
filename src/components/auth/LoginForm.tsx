@@ -1,4 +1,5 @@
 // src/components/auth/LoginForm.tsx
+'use client'
 import React, { useState } from 'react'
 import Input from '../common/Input'
 import Button from '../common/Button'

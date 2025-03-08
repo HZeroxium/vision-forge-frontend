@@ -1,4 +1,5 @@
 // src/app/auth/login.tsx
+'use client'
 import React from 'react'
 import AuthLayout from '@layouts/AuthLayout'
 import LoginForm from '@components/auth/LoginForm'
