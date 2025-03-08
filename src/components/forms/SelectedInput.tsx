@@ -1,3 +1,4 @@
+// src/components/forms/SelectedInput.tsx
 import React from 'react'
 import {
   Select,
@@ -7,9 +8,10 @@ import {
   SelectProps,
 } from '@mui/material'
 
-interface CustomSelectProps extends SelectProps {
+interface CustomSelectProps extends Omit<SelectProps, 'onChange'> {
   label: string
   options: { value: string; label: string }[]
+  onChange?: SelectProps['onChange']
 }
 
 const SelectInput: React.FC<CustomSelectProps> = ({

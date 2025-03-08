@@ -1,9 +1,9 @@
 // src/modules/video/VideoCreator.tsx
 import React, { useState } from 'react'
-import DashboardLayout from '../../layouts/DashboardLayout'
-import TextEditor from '../../components/forms/TextEditor'
-import Button from '../../components/common/Button'
-import VideoPreview from '../../components/video/VideoPreview'
+import DashboardLayout from '@layouts/DashboardLayout'
+import TextEditor from '@components/forms/TextEditor'
+import Button from '@components/common/Button'
+import VideoPreview from '@components/video/VideoPreview'
 
 export default function VideoCreator() {
   const [script, setScript] = useState('')

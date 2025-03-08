@@ -1,9 +1,9 @@
 // src/modules/tts/TTSConfigurator.tsx
 import React, { useState } from 'react'
-import DashboardLayout from '../../layouts/DashboardLayout'
-import SelectInput from '../../components/forms/SelectInput'
-import Input from '../../components/common/Input'
-import Button from '../../components/common/Button'
+import DashboardLayout from '@layouts/DashboardLayout'
+import SelectInput from '@components/forms/SelectedInput'
+import Input from '@components/common/Input'
+import Button from '@components/common/Button'
 
 const voiceOptions = [
   { value: 'default', label: 'Default Voice' },

@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 import Input from '../common/Input'
 import Button from '../common/Button'
 import { useRouter } from 'next/navigation'
-import useAuth from '../../hooks/useAuth'
+import useAuth from '@hooks/useAuth'
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('')

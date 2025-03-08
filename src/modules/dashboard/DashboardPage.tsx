@@ -1,10 +1,10 @@
 // src/modules/dashboard/DashboardPage.tsx
 import React from 'react'
-import DashboardLayout from '../../layouts/DashboardLayout'
+import DashboardLayout from '@layouts/DashboardLayout'
 import { useQuery } from '@tanstack/react-query'
 import { fetchDashboardData } from './dashboardAPI'
-import VideoCard from '../../components/dashboard/VideoCard'
-import StatsChart from '../../components/dashboard/StatsChart'
+import VideoCard from '@components/dashboard/VideoCard'
+import StatsChart from '@components/dashboard/StatsChart'
 
 export default function DashboardModulePage() {
   const { data, isLoading, error } = useQuery(

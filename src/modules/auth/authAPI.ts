@@ -1,5 +1,4 @@
 // src/modules/auth/authAPI.ts
-// src/modules/auth/authAPI.ts
 import api from '@services/api'
 
 export const loginAPI = async (credentials: {

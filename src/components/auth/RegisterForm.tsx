@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import Input from '../common/Input'
 import Button from '../common/Button'
-import useAuth from '../../hooks/useAuth'
+import useAuth from '@hooks/useAuth'
 
 const RegisterForm: React.FC = () => {
   const [email, setEmail] = useState('')

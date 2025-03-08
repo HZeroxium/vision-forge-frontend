@@ -1,5 +1,5 @@
 // src/modules/video/videoAPI.ts
-import api from '../../services/api'
+import api from '@services/api'
 
 export const fetchVideos = async () => {
   const response = await api.get('/videos') // <TODO>: Adjust endpoint

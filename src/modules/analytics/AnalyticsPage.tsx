@@ -1,7 +1,7 @@
 // src/modules/analytics/AnalyticsPage.tsx
 import React from 'react'
-import DashboardLayout from '../../layouts/DashboardLayout'
-import StatsChart from '../../components/dashboard/StatsChart'
+import DashboardLayout from '@layouts/DashboardLayout'
+import StatsChart from '@components/dashboard/StatsChart'
 import { useQuery } from '@tanstack/react-query'
 import { fetchAnalyticsData } from './analyticsAPI'
 

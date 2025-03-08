@@ -1,11 +1,11 @@
 // src/hooks/useAuth.ts
 import { useSelector } from 'react-redux'
-import type { RootState } from '../store/store'
+import type { RootState } from '@store/store'
 import { useCallback } from 'react'
-import { useAppDispatch } from '../store/store'
-import { setCredentials, logout } from '../store/authSlice'
+import { useAppDispatch } from '@store/store'
+import { setCredentials, logout } from '@store/authSlice'
 // Import authService for API calls
-import { loginAPI } from '../modules/auth/authAPI'
+import { loginAPI } from '@modules/auth/authAPI'
 
 const useAuth = () => {
   const dispatch = useAppDispatch()
