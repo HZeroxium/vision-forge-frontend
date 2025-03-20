@@ -1,29 +1,65 @@
 // src/services/authService.ts
-import { User } from '@/modules/auth/authSlice'
 import api from './api'
 
-export interface LoginCredentials {
+export interface LoginResponse {
+  access_token: string
+}
+
+export interface User {
+  id: string
+  email: string
+  name?: string
+  role: string
+  createdAt: string
+}
+
+export const login = async (credentials: {
   email: string
   password: string
-}
-
-export interface AuthResponse {
-  user: User // Replace with actual user type
-  token: string
-}
-
-export const login = async (
-  credentials: LoginCredentials
-): Promise<AuthResponse> => {
-  const response = await api.post('/auth/login', credentials) // <TODO>: Update endpoint if needed
+}): Promise<LoginResponse> => {
+  const response = await api.post('/auth/login', credentials)
   return response.data
 }
 
-export const register = async (data: User): Promise<AuthResponse> => {
-  const response = await api.post('/auth/register', data) // <TODO>: Update endpoint if needed
+export const register = async (data: {
+  email: string
+  password: string
+  name?: string
+}): Promise<User> => {
+  const response = await api.post('/auth/register', data)
   return response.data
 }
 
-export const logout = async (): Promise<void> => {
-  await api.post('/auth/logout') // <TODO>: Update endpoint if needed
+export const forgotPassword = async (
+  email: string
+): Promise<{ message: string; token: string }> => {
+  const response = await api.post('/auth/forgot-password', { email })
+  return response.data
+}
+
+export const resetPassword = async (
+  token: string,
+  newPassword: string
+): Promise<{ message: string }> => {
+  const response = await api.post('/auth/reset-password', {
+    token,
+    newPassword,
+  })
+  return response.data
+}
+
+export const changePassword = async (
+  oldPassword: string,
+  newPassword: string
+): Promise<{ message: string }> => {
+  const response = await api.post('/auth/change-password', {
+    oldPassword,
+    newPassword,
+  })
+  return response.data
+}
+
+export const getProfile = async (): Promise<User> => {
+  const response = await api.get('/auth/profile')
+  return response.data
 }

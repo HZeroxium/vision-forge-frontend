@@ -1,45 +1,65 @@
 // src/components/auth/RegisterForm.tsx
 'use client'
 import React, { useState } from 'react'
-import Input from '../common/Input'
+import { useAuth } from '@hooks/useAuth'
 import Button from '../common/Button'
-import useAuth from '@hooks/useAuth'
+import { Box, TextField, Typography } from '@mui/material'
 
 const RegisterForm: React.FC = () => {
+  const { register, loading, error } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  // Additional fields as needed
-  const {
-    /*register*/
-  } = useAuth()
+  const [name, setName] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // <TODO>: Call registration API
+    await register(email, password, name)
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto p-4">
-      <Input
-        type="email"
+    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }} noValidate>
+      <Typography variant="h5" gutterBottom>
+        Register
+      </Typography>
+      <TextField
+        label="Name"
+        variant="outlined"
+        fullWidth
+        margin="normal"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+      <TextField
+        label="Email"
+        variant="outlined"
+        fullWidth
+        margin="normal"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder="Email"
-        fullWidth
-        className="mb-4"
+        required
       />
-      <Input
+      <TextField
+        label="Password"
         type="password"
+        variant="outlined"
+        fullWidth
+        margin="normal"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        placeholder="Password"
-        fullWidth
-        className="mb-4"
+        required
       />
-      <Button type="submit" fullWidth>
-        Register
+      {error && <Typography color="error">{error}</Typography>}
+      <Button
+        type="submit"
+        variant="contained"
+        color="primary"
+        fullWidth
+        disabled={loading}
+        sx={{ mt: 2 }}
+      >
+        {loading ? 'Registering...' : 'Register'}
       </Button>
-    </form>
+    </Box>
   )
 }
 

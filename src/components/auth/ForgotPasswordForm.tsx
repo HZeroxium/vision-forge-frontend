@@ -1,24 +1,25 @@
-// src/components/auth/LoginForm.tsx
-'use client'
+// src/components/auth/ForgotPasswordForm.tsx
 import React, { useState } from 'react'
 import { useAuth } from '@hooks/useAuth'
-import Button from '../common/Button'
-import { Box, TextField, Typography } from '@mui/material'
+import { TextField, Button, Typography, Box } from '@mui/material'
 
-const LoginForm: React.FC = () => {
-  const { login, loading, error } = useAuth()
+const ForgotPasswordForm: React.FC = () => {
+  const { forgotPassword, loading, error } = useAuth()
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [message, setMessage] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    await login(email, password)
+    const res = await forgotPassword(email)
+    if (res) {
+      setMessage('Password reset token generated. Please check your email.')
+    }
   }
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }} noValidate>
       <Typography variant="h5" gutterBottom>
-        Login
+        Forgot Password
       </Typography>
       <TextField
         label="Email"
@@ -29,29 +30,20 @@ const LoginForm: React.FC = () => {
         onChange={(e) => setEmail(e.target.value)}
         required
       />
-      <TextField
-        label="Password"
-        type="password"
-        variant="outlined"
-        fullWidth
-        margin="normal"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-      />
       {error && <Typography color="error">{error}</Typography>}
+      {message && <Typography color="success.main">{message}</Typography>}
       <Button
         type="submit"
         variant="contained"
-        color="primary"
+        color="secondary"
         fullWidth
         disabled={loading}
         sx={{ mt: 2 }}
       >
-        {loading ? 'Logging in...' : 'Login'}
+        {loading ? 'Processing...' : 'Reset Password'}
       </Button>
     </Box>
   )
 }
 
-export default LoginForm
+export default ForgotPasswordForm

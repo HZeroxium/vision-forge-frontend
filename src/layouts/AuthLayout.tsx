@@ -1,11 +1,14 @@
 // src/layouts/AuthLayout.tsx
+import { Container, Paper } from '@mui/material'
 import React from 'react'
 
 const AuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      {children}
-    </div>
+    <Container maxWidth="sm" sx={{ mt: 8 }}>
+      <Paper elevation={3} sx={{ p: 4 }}>
+        {children}
+      </Paper>
+    </Container>
   )
 }
 

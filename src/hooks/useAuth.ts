@@ -1,32 +1,116 @@
 // src/hooks/useAuth.ts
-import { useSelector } from 'react-redux'
-import type { RootState } from '@store/store'
-import { useCallback } from 'react'
-import { useAppDispatch } from '@store/store'
-import { setCredentials, logout } from '@store/authSlice'
-// Import authService for API calls
-import { loginAPI } from '@modules/auth/authAPI'
+import { useEffect, useState } from 'react'
+import * as authService from '../services/authService'
+import { User } from '../services/authService'
 
-const useAuth = () => {
-  const dispatch = useAppDispatch()
-  const auth = useSelector((state: RootState) => state.auth)
+export const useAuth = () => {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState<boolean>(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const login = useCallback(
-    async (credentials: { email: string; password: string }) => {
-      // Call API (placeholder)
-      const data = await loginAPI(credentials) // <TODO: Implement actual API call
-      dispatch(setCredentials({ user: data.user, token: data.token }))
-    },
-    [dispatch]
-  )
+  const login = async (email: string, password: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await authService.login({ email, password })
+      // Lưu token vào localStorage (hoặc Redux store)
+      localStorage.setItem('token', data.access_token)
+      // Sau đó lấy thông tin profile
+      const profile = await authService.getProfile()
+      setUser(profile)
+    } catch (err) {
+      setError('Login failed. Please check your credentials.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const signOut = useCallback(() => {
-    // Clear token and user info
-    dispatch(logout())
-    // Additional cleanup if needed
-  }, [dispatch])
+  const register = async (email: string, password: string, name?: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const newUser = await authService.register({ email, password, name })
+      setUser(newUser)
+    } catch (err) {
+      setError('Registration failed. Email might already be registered.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  return { auth, login, signOut }
+  const logout = () => {
+    localStorage.removeItem('token')
+    setUser(null)
+  }
+
+  const forgotPassword = async (email: string) => {
+    setLoading(true)
+    try {
+      const response = await authService.forgotPassword(email)
+      return response // chứa thông điệp và token (nếu cần dùng cho UI)
+    } catch (err) {
+      setError('Forgot password request failed.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const resetPassword = async (token: string, newPassword: string) => {
+    setLoading(true)
+    try {
+      const response = await authService.resetPassword(token, newPassword)
+      return response
+    } catch (err) {
+      setError('Reset password failed.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const changePassword = async (oldPassword: string, newPassword: string) => {
+    setLoading(true)
+    try {
+      const response = await authService.changePassword(
+        oldPassword,
+        newPassword
+      )
+      return response
+    } catch (err) {
+      setError('Change password failed.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadProfile = async () => {
+    setLoading(true)
+    try {
+      const profile = await authService.getProfile()
+      setUser(profile)
+    } catch (err) {
+      setError('Failed to load profile.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      loadProfile()
+    }
+  }, [])
+
+  return {
+    user,
+    loading,
+    error,
+    login,
+    register,
+    logout,
+    forgotPassword,
+    resetPassword,
+    changePassword,
+    loadProfile,
+  }
 }
-
-export default useAuth
