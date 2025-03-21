@@ -1,34 +1,71 @@
 // src/components/media/FileUploader.tsx
-import React, { useRef } from 'react'
+// src/components/upload/FileUploader.tsx
+import React, { useState, ChangeEvent } from 'react'
+import { Box, Button, Typography } from '@mui/material'
+import { uploadFile } from '@services/uploadService'
 
 interface FileUploaderProps {
-  onFileSelect: (file: File) => void
+  onUpload: (file: File) => Promise<void>
 }
 
-const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelect }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null)
+const FileUploader: React.FC<FileUploaderProps> = ({ onUpload }) => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [message, setMessage] = useState('')
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      onFileSelect(e.target.files[0])
+      setSelectedFile(e.target.files[0])
+    }
+  }
+
+  const handleUpload = async () => {
+    if (!selectedFile) return
+    setUploading(true)
+    setMessage('')
+    try {
+      await onUpload(selectedFile)
+      setMessage('File uploaded successfully.')
+    } catch (error: any) {
+      setMessage('File upload failed.')
+    } finally {
+      setUploading(false)
     }
   }
 
   return (
-    <div>
+    <Box>
       <input
         type="file"
-        ref={fileInputRef}
-        className="hidden"
         onChange={handleFileChange}
+        style={{ display: 'none' }}
+        id="file-upload-input"
       />
-      <button
-        onClick={() => fileInputRef.current?.click()}
-        className="bg-blue-500 text-white px-4 py-2 rounded"
+      <label htmlFor="file-upload-input">
+        <Button variant="outlined" component="span">
+          Choose File
+        </Button>
+      </label>
+      {selectedFile && (
+        <Typography variant="body1" sx={{ mt: 1 }}>
+          {selectedFile.name}
+        </Typography>
+      )}
+      <Button
+        variant="contained"
+        color="primary"
+        sx={{ mt: 2 }}
+        onClick={handleUpload}
+        disabled={!selectedFile || uploading}
       >
-        Choose File
-      </button>
-    </div>
+        {uploading ? 'Uploading...' : 'Upload File'}
+      </Button>
+      {message && (
+        <Typography variant="body2" color="primary" sx={{ mt: 1 }}>
+          {message}
+        </Typography>
+      )}
+    </Box>
   )
 }
 

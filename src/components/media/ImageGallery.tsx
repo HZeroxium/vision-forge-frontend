@@ -1,23 +1,59 @@
 // src/components/media/ImageGallery.tsx
-import Image from 'next/image'
-import React from 'react'
+import React, { useEffect } from 'react'
+import { Typography, CircularProgress, Box, Pagination } from '@mui/material'
+import Grid from '@mui/material/Grid2' // Updated to use Grid2 instead of deprecated Grid
+import { useImages } from '@hooks/useImages'
+import ImageCard from './ImageCard'
 
-interface ImageGalleryProps {
-  images: string[]
-}
+const ImageGallery: React.FC = () => {
+  const { images, loading, error, page, totalPages, loadImages } = useImages()
 
-const ImageGallery: React.FC<ImageGalleryProps> = ({ images }) => {
+  useEffect(() => {
+    loadImages(page, 10)
+  }, [loadImages, page])
+
+  const handlePageChange = (
+    event: React.ChangeEvent<unknown>,
+    value: number
+  ) => {
+    loadImages(value, 10)
+  }
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" mt={4}>
+        <CircularProgress />
+      </Box>
+    )
+  }
+
+  if (error) {
+    return (
+      <Typography color="error" align="center" mt={4}>
+        {error}
+      </Typography>
+    )
+  }
+
   return (
-    <div className="grid grid-cols-3 gap-2">
-      {images.map((img, index) => (
-        <Image
-          key={index}
-          src={img}
-          alt={`Gallery ${index}`}
-          className="object-cover w-full h-32 rounded"
-        />
-      ))}
-    </div>
+    <Box mt={4}>
+      <Grid container spacing={2}>
+        {images.map((img) => (
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={img.id}>
+            <ImageCard image={img} />
+          </Grid>
+        ))}
+      </Grid>
+      {totalPages > 1 && (
+        <Box display="flex" justifyContent="center" mt={4}>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={handlePageChange}
+          />
+        </Box>
+      )}
+    </Box>
   )
 }
 

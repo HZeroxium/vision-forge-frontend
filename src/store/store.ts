@@ -5,10 +5,12 @@ import authReducer from './authSlice'
 import videoReducer from './videoSlice'
 import settingsReducer from './settingsSlice'
 import ttsReducer from './ttsSlice'
+import imagesReducer from './imagesSlice'
 
 const store = configureStore({
   reducer: {
     auth: authReducer,
+    images: imagesReducer,
     video: videoReducer,
     settings: settingsReducer,
     tts: ttsReducer,
