@@ -1,107 +1,121 @@
 // src/components/auth/ChangePasswordForm.tsx
 'use client'
-import React, { useState, FormEvent } from 'react'
-import { Box, TextField, Typography, Button } from '@mui/material'
+import React from 'react'
+import { useForm, SubmitHandler } from 'react-hook-form'
+import {
+  Box,
+  TextField,
+  Typography,
+  Button,
+  CircularProgress,
+} from '@mui/material'
 import { useAppDispatch, useAppSelector } from '@store/store'
 import { changePasswordAsync, clearError } from '@store/authSlice'
+import { useTranslation } from 'react-i18next'
 
-const ChangePasswordForm: React.FC = () => {
+interface IChangePasswordFormInputs {
+  oldPassword: string
+  newPassword: string
+  confirmPassword: string
+}
+
+export default function ChangePasswordForm() {
   const dispatch = useAppDispatch()
   const { loading, error } = useAppSelector((state) => state.auth)
-  const [oldPassword, setOldPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [message, setMessage] = useState('')
+  const { t } = useTranslation('auth')
 
-  // Handle form submission
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (newPassword !== confirmPassword) {
-      setMessage('New password and confirmation do not match.')
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<IChangePasswordFormInputs>()
+
+  const onSubmit: SubmitHandler<IChangePasswordFormInputs> = async (data) => {
+    if (data.newPassword !== data.confirmPassword) {
+      setError('confirmPassword', {
+        type: 'manual',
+        message: t('errors.passwordMismatch'),
+      })
       return
     }
-    // Dispatch change password async action
-    const resultAction = await dispatch(
-      changePasswordAsync({ oldPassword, newPassword })
+    // Dispatch async action to change password
+    await dispatch(
+      changePasswordAsync({
+        oldPassword: data.oldPassword,
+        newPassword: data.newPassword,
+      })
     )
-    if (changePasswordAsync.fulfilled.match(resultAction)) {
-      setMessage('Password changed successfully.')
-    }
-  }
-
-  // Clear error on input change
-  const handleInputChange = () => {
-    if (error) {
-      dispatch(clearError())
-    }
+    // Optionally: show a toast or success message here
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Change Password
+    <Box
+      component="form"
+      onSubmit={handleSubmit(onSubmit)}
+      className="flex flex-col gap-4 mt-4"
+    >
+      <Typography variant="h5" className="font-bold text-center mb-2">
+        {t('changePasswordTitle')}
       </Typography>
+
       <TextField
-        label="Old Password"
+        label={t('oldPasswordLabel')}
         type="password"
         variant="outlined"
         fullWidth
-        margin="normal"
-        value={oldPassword}
-        onChange={(e) => {
-          setOldPassword(e.target.value)
-          handleInputChange()
-        }}
-        required
+        {...register('oldPassword', { required: true })}
+        error={!!errors.oldPassword}
+        helperText={errors.oldPassword && t('errors.genericError')}
+        onChange={() => error && dispatch(clearError())}
       />
+
       <TextField
-        label="New Password"
+        label={t('newPasswordLabel')}
         type="password"
         variant="outlined"
         fullWidth
-        margin="normal"
-        value={newPassword}
-        onChange={(e) => {
-          setNewPassword(e.target.value)
-          handleInputChange()
-        }}
-        required
+        {...register('newPassword', { required: true })}
+        error={!!errors.newPassword}
+        helperText={errors.newPassword && t('errors.genericError')}
+        onChange={() => error && dispatch(clearError())}
       />
+
       <TextField
-        label="Confirm New Password"
+        label={t('confirmNewPasswordLabel')}
         type="password"
         variant="outlined"
         fullWidth
-        margin="normal"
-        value={confirmPassword}
-        onChange={(e) => {
-          setConfirmPassword(e.target.value)
-          handleInputChange()
-        }}
-        required
+        {...register('confirmPassword', { required: true })}
+        error={!!errors.confirmPassword}
+        helperText={
+          errors.confirmPassword
+            ? errors.confirmPassword.message || t('errors.genericError')
+            : ''
+        }
+        onChange={() => error && dispatch(clearError())}
       />
+
       {error && (
-        <Typography color="error" sx={{ mt: 1 }}>
+        <Typography color="error" variant="body2">
           {error}
         </Typography>
       )}
-      {message && (
-        <Typography color="primary" sx={{ mt: 1 }}>
-          {message}
-        </Typography>
-      )}
+
       <Button
         type="submit"
         variant="contained"
         color="primary"
         fullWidth
-        sx={{ mt: 2 }}
         disabled={loading}
+        className="mt-2"
       >
-        {loading ? 'Processing...' : 'Change Password'}
+        {loading ? (
+          <CircularProgress size={20} className="text-white" />
+        ) : (
+          t('changePasswordButton')
+        )}
       </Button>
     </Box>
   )
 }
-
-export default ChangePasswordForm

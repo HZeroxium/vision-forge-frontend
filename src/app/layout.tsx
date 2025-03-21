@@ -3,8 +3,9 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import '@styles/globals.css'
 import React from 'react'
-import Providers from '@components/providers/Providers' // ✅ Import Client Component
-
+import Providers from '@components/providers/Providers'
+import { NextI18nextProvider } from '@/components/providers/NextI18nextProvider'
+import TopNav from '@/components/navigation/TopNav'
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
@@ -28,9 +29,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-base-200`}
       >
-        <Providers>{children}</Providers>
+        <NextI18nextProvider>
+          <Providers>
+            <TopNav />
+            {children}
+          </Providers>
+        </NextI18nextProvider>
       </body>
     </html>
   )
