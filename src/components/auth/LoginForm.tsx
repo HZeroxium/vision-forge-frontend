@@ -1,23 +1,32 @@
 // src/components/auth/LoginForm.tsx
 'use client'
-import React, { useState } from 'react'
-import { useAuth } from '@hooks/useAuth'
-import Button from '../common/Button'
-import { Box, TextField, Typography } from '@mui/material'
+import React, { useState, FormEvent } from 'react'
+import { Box, TextField, Typography, Button } from '@mui/material'
+import { useAppDispatch, useAppSelector } from '@store/store'
+import { loginAsync, clearError } from '@store/authSlice'
 
 const LoginForm: React.FC = () => {
-  const { login, loading, error } = useAuth()
+  const dispatch = useAppDispatch()
+  const { loading, error, user } = useAppSelector((state) => state.auth)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Handle form submission
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    await login(email, password)
+    dispatch(loginAsync({ email, password }))
+  }
+
+  // Clear error on input change
+  const handleInputChange = () => {
+    if (error) {
+      dispatch(clearError())
+    }
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }} noValidate>
-      <Typography variant="h5" gutterBottom>
+    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 4 }}>
+      <Typography variant="h4" gutterBottom>
         Login
       </Typography>
       <TextField
@@ -26,7 +35,10 @@ const LoginForm: React.FC = () => {
         fullWidth
         margin="normal"
         value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        onChange={(e) => {
+          setEmail(e.target.value)
+          handleInputChange()
+        }}
         required
       />
       <TextField
@@ -36,20 +48,32 @@ const LoginForm: React.FC = () => {
         fullWidth
         margin="normal"
         value={password}
-        onChange={(e) => setPassword(e.target.value)}
+        onChange={(e) => {
+          setPassword(e.target.value)
+          handleInputChange()
+        }}
         required
       />
-      {error && <Typography color="error">{error}</Typography>}
+      {error && (
+        <Typography color="error" sx={{ mt: 1 }}>
+          {error}
+        </Typography>
+      )}
       <Button
         type="submit"
         variant="contained"
         color="primary"
         fullWidth
-        disabled={loading}
         sx={{ mt: 2 }}
+        disabled={loading}
       >
         {loading ? 'Logging in...' : 'Login'}
       </Button>
+      {user && (
+        <Typography variant="subtitle1" sx={{ mt: 2 }}>
+          Welcome, {user.name || user.email}!
+        </Typography>
+      )}
     </Box>
   )
 }

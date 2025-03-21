@@ -1,24 +1,35 @@
 // src/components/auth/ForgotPasswordForm.tsx
-import React, { useState } from 'react'
-import { useAuth } from '@hooks/useAuth'
-import { TextField, Button, Typography, Box } from '@mui/material'
+'use client'
+import React, { useState, FormEvent } from 'react'
+import { Box, TextField, Typography, Button } from '@mui/material'
+import { useAppDispatch, useAppSelector } from '@store/store'
+import { forgotPasswordAsync, clearError } from '@store/authSlice'
 
 const ForgotPasswordForm: React.FC = () => {
-  const { forgotPassword, loading, error } = useAuth()
+  const dispatch = useAppDispatch()
+  const { loading, error } = useAppSelector((state) => state.auth)
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Handle form submission
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const res = await forgotPassword(email)
-    if (res) {
+    const resultAction = await dispatch(forgotPasswordAsync({ email }))
+    if (forgotPasswordAsync.fulfilled.match(resultAction)) {
       setMessage('Password reset token generated. Please check your email.')
     }
   }
 
+  // Clear error on input change
+  const handleInputChange = () => {
+    if (error) {
+      dispatch(clearError())
+    }
+  }
+
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }} noValidate>
-      <Typography variant="h5" gutterBottom>
+    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 4 }}>
+      <Typography variant="h4" gutterBottom>
         Forgot Password
       </Typography>
       <TextField
@@ -27,18 +38,29 @@ const ForgotPasswordForm: React.FC = () => {
         fullWidth
         margin="normal"
         value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        onChange={(e) => {
+          setEmail(e.target.value)
+          handleInputChange()
+        }}
         required
       />
-      {error && <Typography color="error">{error}</Typography>}
-      {message && <Typography color="success.main">{message}</Typography>}
+      {error && (
+        <Typography color="error" sx={{ mt: 1 }}>
+          {error}
+        </Typography>
+      )}
+      {message && (
+        <Typography color="primary" sx={{ mt: 1 }}>
+          {message}
+        </Typography>
+      )}
       <Button
         type="submit"
         variant="contained"
         color="secondary"
         fullWidth
-        disabled={loading}
         sx={{ mt: 2 }}
+        disabled={loading}
       >
         {loading ? 'Processing...' : 'Reset Password'}
       </Button>

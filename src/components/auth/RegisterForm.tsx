@@ -1,24 +1,33 @@
 // src/components/auth/RegisterForm.tsx
 'use client'
-import React, { useState } from 'react'
-import { useAuth } from '@hooks/useAuth'
-import Button from '../common/Button'
-import { Box, TextField, Typography } from '@mui/material'
+import React, { useState, FormEvent } from 'react'
+import { Box, TextField, Typography, Button } from '@mui/material'
+import { useAppDispatch, useAppSelector } from '@store/store'
+import { registerAsync, clearError } from '@store/authSlice'
 
 const RegisterForm: React.FC = () => {
-  const { register, loading, error } = useAuth()
+  const dispatch = useAppDispatch()
+  const { loading, error } = useAppSelector((state) => state.auth)
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Handle form submission
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    await register(email, password, name)
+    dispatch(registerAsync({ email, password, name }))
+  }
+
+  // Clear error on input change
+  const handleInputChange = () => {
+    if (error) {
+      dispatch(clearError())
+    }
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }} noValidate>
-      <Typography variant="h5" gutterBottom>
+    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 4 }}>
+      <Typography variant="h4" gutterBottom>
         Register
       </Typography>
       <TextField
@@ -27,7 +36,10 @@ const RegisterForm: React.FC = () => {
         fullWidth
         margin="normal"
         value={name}
-        onChange={(e) => setName(e.target.value)}
+        onChange={(e) => {
+          setName(e.target.value)
+          handleInputChange()
+        }}
       />
       <TextField
         label="Email"
@@ -35,7 +47,10 @@ const RegisterForm: React.FC = () => {
         fullWidth
         margin="normal"
         value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        onChange={(e) => {
+          setEmail(e.target.value)
+          handleInputChange()
+        }}
         required
       />
       <TextField
@@ -45,17 +60,24 @@ const RegisterForm: React.FC = () => {
         fullWidth
         margin="normal"
         value={password}
-        onChange={(e) => setPassword(e.target.value)}
+        onChange={(e) => {
+          setPassword(e.target.value)
+          handleInputChange()
+        }}
         required
       />
-      {error && <Typography color="error">{error}</Typography>}
+      {error && (
+        <Typography color="error" sx={{ mt: 1 }}>
+          {error}
+        </Typography>
+      )}
       <Button
         type="submit"
         variant="contained"
         color="primary"
         fullWidth
-        disabled={loading}
         sx={{ mt: 2 }}
+        disabled={loading}
       >
         {loading ? 'Registering...' : 'Register'}
       </Button>

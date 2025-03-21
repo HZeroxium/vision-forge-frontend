@@ -1,73 +1,104 @@
 // src/components/auth/ChangePasswordForm.tsx
-import React, { useState } from 'react'
-import { Box, Button, TextField, Typography } from '@mui/material'
-import { useAuth } from '@hooks/useAuth'
+'use client'
+import React, { useState, FormEvent } from 'react'
+import { Box, TextField, Typography, Button } from '@mui/material'
+import { useAppDispatch, useAppSelector } from '@store/store'
+import { changePasswordAsync, clearError } from '@store/authSlice'
 
 const ChangePasswordForm: React.FC = () => {
-  const { changePassword, loading, error } = useAuth()
+  const dispatch = useAppDispatch()
+  const { loading, error } = useAppSelector((state) => state.auth)
   const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [message, setMessage] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Handle form submission
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (newPassword !== confirmPassword) {
-      setMessage('Mật khẩu mới và xác nhận không khớp.')
+      setMessage('New password and confirmation do not match.')
       return
     }
-    const res = await changePassword(oldPassword, newPassword)
-    if (res && res.message) {
-      setMessage(res.message)
+    // Dispatch change password async action
+    const resultAction = await dispatch(
+      changePasswordAsync({ oldPassword, newPassword })
+    )
+    if (changePasswordAsync.fulfilled.match(resultAction)) {
+      setMessage('Password changed successfully.')
+    }
+  }
+
+  // Clear error on input change
+  const handleInputChange = () => {
+    if (error) {
+      dispatch(clearError())
     }
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }} noValidate>
-      <Typography variant="h5" gutterBottom>
-        Đổi mật khẩu
+    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 4 }}>
+      <Typography variant="h4" gutterBottom>
+        Change Password
       </Typography>
       <TextField
-        label="Mật khẩu cũ"
+        label="Old Password"
         type="password"
         variant="outlined"
         fullWidth
         margin="normal"
         value={oldPassword}
-        onChange={(e) => setOldPassword(e.target.value)}
+        onChange={(e) => {
+          setOldPassword(e.target.value)
+          handleInputChange()
+        }}
         required
       />
       <TextField
-        label="Mật khẩu mới"
+        label="New Password"
         type="password"
         variant="outlined"
         fullWidth
         margin="normal"
         value={newPassword}
-        onChange={(e) => setNewPassword(e.target.value)}
+        onChange={(e) => {
+          setNewPassword(e.target.value)
+          handleInputChange()
+        }}
         required
       />
       <TextField
-        label="Xác nhận mật khẩu mới"
+        label="Confirm New Password"
         type="password"
         variant="outlined"
         fullWidth
         margin="normal"
         value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
+        onChange={(e) => {
+          setConfirmPassword(e.target.value)
+          handleInputChange()
+        }}
         required
       />
-      {error && <Typography color="error">{error}</Typography>}
-      {message && <Typography color="primary">{message}</Typography>}
+      {error && (
+        <Typography color="error" sx={{ mt: 1 }}>
+          {error}
+        </Typography>
+      )}
+      {message && (
+        <Typography color="primary" sx={{ mt: 1 }}>
+          {message}
+        </Typography>
+      )}
       <Button
         type="submit"
         variant="contained"
         color="primary"
         fullWidth
-        disabled={loading}
         sx={{ mt: 2 }}
+        disabled={loading}
       >
-        {loading ? 'Đang xử lý...' : 'Đổi mật khẩu'}
+        {loading ? 'Processing...' : 'Change Password'}
       </Button>
     </Box>
   )
