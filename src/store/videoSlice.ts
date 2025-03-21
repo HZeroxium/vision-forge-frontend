@@ -1,39 +1,82 @@
 // src/store/videoSlice.ts
-import { Video } from '@/modules/dashboard/dashboardSlice'
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
+import * as videoService from '@services/videoService'
+import type { Video, VideosPaginationDto } from '@services/videoService'
 
-interface VideoState {
+export interface VideoState {
   videos: Video[]
+  totalCount: number
+  page: number
+  limit: number
+  totalPages: number
   loading: boolean
   error: string | null
 }
 
 const initialState: VideoState = {
   videos: [],
+  totalCount: 0,
+  page: 1,
+  limit: 10,
+  totalPages: 0,
   loading: false,
   error: null,
 }
 
+/**
+ * Async thunk to fetch paginated videos.
+ */
+export const fetchVideosAsync = createAsyncThunk(
+  'videos/fetchVideos',
+  async (
+    params: { page?: number; limit?: number } = {},
+    { rejectWithValue }
+  ) => {
+    try {
+      const data: VideosPaginationDto = await videoService.fetchVideos(
+        params.page,
+        params.limit
+      )
+      return data
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Failed to fetch videos'
+      )
+    }
+  }
+)
+
 const videoSlice = createSlice({
-  name: 'video',
+  name: 'videos',
   initialState,
   reducers: {
-    fetchVideosStart(state) {
-      state.loading = true
+    clearVideoError(state) {
       state.error = null
     },
-    fetchVideosSuccess(state, action: PayloadAction<Video[]>) {
-      state.videos = action.payload
-      state.loading = false
-    },
-    fetchVideosFailure(state, action: PayloadAction<string>) {
-      state.loading = false
-      state.error = action.payload
-    },
-    // Additional reducers for create, update, delete video actions
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchVideosAsync.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(
+        fetchVideosAsync.fulfilled,
+        (state, action: PayloadAction<VideosPaginationDto>) => {
+          state.loading = false
+          state.videos = action.payload.videos
+          state.totalCount = action.payload.totalCount
+          state.page = action.payload.page
+          state.limit = action.payload.limit
+          state.totalPages = action.payload.totalPages
+        }
+      )
+      .addCase(fetchVideosAsync.rejected, (state, action) => {
+        state.loading = false
+        state.error = (action.payload as string) || 'Failed to fetch videos'
+      })
   },
 })
 
-export const { fetchVideosStart, fetchVideosSuccess, fetchVideosFailure } =
-  videoSlice.actions
+export const { clearVideoError } = videoSlice.actions
 export default videoSlice.reducer

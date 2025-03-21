@@ -1,34 +1,36 @@
-// src/components/media/AudioGallery.tsx
+// src/components/video/VideoGallery.tsx
 import React, { useEffect } from 'react'
 import { Typography, CircularProgress, Box, Pagination } from '@mui/material'
 import Grid from '@mui/material/Grid2'
-import { useAudios } from '@hooks/useAudios'
-import AudioCard from './AudioCard'
+import { useVideos } from '@hooks/useVideos'
+import VideoCard from './VideoCard'
 
-const AudioGallery: React.FC = () => {
-  const { audios, loading, error, page, totalPages, loadAudios } = useAudios()
+const VideoGallery: React.FC = () => {
+  const { videos, loading, error, page, totalPages, loadVideos } = useVideos()
 
-  // Load audios when the component mounts
+  // Load videos when the component mounts or when page changes
   useEffect(() => {
-    loadAudios(page, 10)
-  }, [loadAudios, page])
+    loadVideos(page, 10)
+  }, [loadVideos, page])
 
   const handlePageChange = (
     event: React.ChangeEvent<unknown>,
     value: number
   ) => {
-    loadAudios(value, 10)
+    loadVideos(value, 10)
   }
 
-  // Optional: Handle play audio function (e.g., open a modal with an audio player)
-  const handlePlay = (url: string) => {
-    window.open(url, '_blank')
+  // Handle preview button – open video URL in a new window or modal
+  const handlePreview = (url?: string) => {
+    if (url) {
+      window.open(url, '_blank')
+    }
   }
 
-  // Optional: Handle delete audio (dispatch a delete action here)
+  // Handle delete button (to be implemented)
   const handleDelete = (id: string) => {
-    // Implement deletion logic (e.g., dispatch deleteAudioAsync)
-    console.log('Delete audio with id:', id)
+    // Implement deletion logic, e.g., dispatch a deleteVideoAsync action
+    console.log('Delete video with ID:', id)
   }
 
   if (loading) {
@@ -50,11 +52,11 @@ const AudioGallery: React.FC = () => {
   return (
     <Box mt={4}>
       <Grid container spacing={2}>
-        {audios.map((audio) => (
-          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={audio.id}>
-            <AudioCard
-              audio={audio}
-              onPlay={handlePlay}
+        {videos.map((video) => (
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={video.id}>
+            <VideoCard
+              video={video}
+              onPreview={handlePreview}
               onDelete={handleDelete}
             />
           </Grid>
@@ -73,4 +75,4 @@ const AudioGallery: React.FC = () => {
   )
 }
 
-export default AudioGallery
+export default VideoGallery
