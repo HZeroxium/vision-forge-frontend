@@ -9,20 +9,14 @@ const Sidebar: React.FC = () => {
         <Link href="/dashboard" className="block p-2 hover:bg-gray-200 rounded">
           Dashboard
         </Link>
-        <Link href="/media" className="block p-2 hover:bg-gray-200 rounded">
-          Media
+        <Link href="/images" className="block p-2 hover:bg-gray-200 rounded">
+          Image Gallery
         </Link>
-        <Link
-          href="/video-editor"
-          className="block p-2 hover:bg-gray-200 rounded"
-        >
-          Video Editor
+        <Link href="/videos" className="block p-2 hover:bg-gray-200 rounded">
+          Videos Library
         </Link>
-        <Link
-          href="/publishing"
-          className="block p-2 hover:bg-gray-200 rounded"
-        >
-          Publishing
+        <Link href="/audios" className="block p-2 hover:bg-gray-200 rounded">
+          Audio Library
         </Link>
         {/* Additional links */}
       </nav>

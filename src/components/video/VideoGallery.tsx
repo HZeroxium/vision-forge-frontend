@@ -1,6 +1,12 @@
 // src/components/video/VideoGallery.tsx
 import React, { useEffect } from 'react'
-import { Typography, CircularProgress, Box, Pagination } from '@mui/material'
+import {
+  Typography,
+  CircularProgress,
+  Box,
+  Pagination,
+  Button,
+} from '@mui/material'
 import Grid from '@mui/material/Grid2'
 import { useVideos } from '@hooks/useVideos'
 import VideoCard from './VideoCard'
@@ -10,8 +16,11 @@ const VideoGallery: React.FC = () => {
 
   // Load videos when the component mounts or when page changes
   useEffect(() => {
-    loadVideos(page, 10)
-  }, [loadVideos, page])
+    // Only fetch videos if there is no error to prevent auto-retry spam
+    if (!error) {
+      loadVideos(page, 10)
+    }
+  }, [loadVideos, page, error])
 
   const handlePageChange = (
     event: React.ChangeEvent<unknown>,
@@ -43,9 +52,22 @@ const VideoGallery: React.FC = () => {
 
   if (error) {
     return (
-      <Typography color="error" align="center" mt={4}>
-        {error}
-      </Typography>
+      <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
+        <Typography variant="h6" color="error">
+          Oops! Failed to load images.
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          {error}
+        </Typography>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={() => loadVideos(page, 10)}
+          sx={{ mt: 2 }}
+        >
+          Retry
+        </Button>
+      </Box>
     )
   }
 

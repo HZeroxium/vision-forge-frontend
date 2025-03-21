@@ -1,6 +1,12 @@
 // src/components/media/ImageGallery.tsx
 import React, { useEffect } from 'react'
-import { Typography, CircularProgress, Box, Pagination } from '@mui/material'
+import {
+  Typography,
+  CircularProgress,
+  Box,
+  Pagination,
+  Button,
+} from '@mui/material'
 import Grid from '@mui/material/Grid2' // Updated to use Grid2 instead of deprecated Grid
 import { useImages } from '@hooks/useImages'
 import ImageCard from './ImageCard'
@@ -9,8 +15,12 @@ const ImageGallery: React.FC = () => {
   const { images, loading, error, page, totalPages, loadImages } = useImages()
 
   useEffect(() => {
-    loadImages(page, 10)
-  }, [loadImages, page])
+    // Only fetch images if there is no error (avoid auto-retry spam)
+    if (!error) {
+      loadImages(page, 10)
+    }
+    // Note: page and loadImages are dependencies, error stops auto retry on error state
+  }, [loadImages, page, error])
 
   const handlePageChange = (
     event: React.ChangeEvent<unknown>,
@@ -29,9 +39,22 @@ const ImageGallery: React.FC = () => {
 
   if (error) {
     return (
-      <Typography color="error" align="center" mt={4}>
-        {error}
-      </Typography>
+      <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
+        <Typography variant="h6" color="error">
+          Oops! Failed to load images.
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          {error}
+        </Typography>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={() => loadImages(page, 10)}
+          sx={{ mt: 2 }}
+        >
+          Retry
+        </Button>
+      </Box>
     )
   }
 

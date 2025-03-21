@@ -27,8 +27,8 @@ export const createImage = async (data: {
 }
 
 export const fetchImages = async (
-  page = 1,
-  limit = 10
+  page: number = 1,
+  limit: number = 10
 ): Promise<ImagesPaginationDto> => {
   const response = await api.get('/images', { params: { page, limit } })
   return response.data

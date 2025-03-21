@@ -2,6 +2,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import * as imagesService from '../services/imagesService'
 import type { Image, ImagesPaginationDto } from '../services/imagesService'
+import type { RootState } from './store'
 
 export interface ImagesState {
   images: Image[]
@@ -37,6 +38,16 @@ export const fetchImagesAsync = createAsyncThunk(
         error.response?.data?.message || 'Failed to fetch images'
       )
     }
+  },
+  {
+    // Prevent duplicate calls if already loading
+    condition: (params, { getState }) => {
+      const state = getState() as RootState
+      if (state.images.loading) {
+        return false
+      }
+      return true
+    },
   }
 )
 
