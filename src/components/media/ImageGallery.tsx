@@ -7,7 +7,7 @@ import {
   Pagination,
   Button,
 } from '@mui/material'
-import Grid from '@mui/material/Grid2' // Updated to use Grid2 instead of deprecated Grid
+import Grid from '@mui/material/Grid2'
 import { useImages } from '@hooks/useImages'
 import ImageCard from './ImageCard'
 
@@ -19,7 +19,7 @@ const ImageGallery: React.FC = () => {
     if (!error) {
       loadImages(page, 10)
     }
-    // Note: page and loadImages are dependencies, error stops auto retry on error state
+    // page and loadImages are dependencies, error stops auto retry on error state
   }, [loadImages, page, error])
 
   const handlePageChange = (
@@ -43,7 +43,7 @@ const ImageGallery: React.FC = () => {
         <Typography variant="h6" color="error">
           Oops! Failed to load images.
         </Typography>
-        <Typography variant="body2" color="textSecondary">
+        <Typography variant="body2" color="text.secondary">
           {error}
         </Typography>
         <Button
@@ -59,7 +59,7 @@ const ImageGallery: React.FC = () => {
   }
 
   return (
-    <Box mt={4}>
+    <Box mt={4} className="bg-base-100 p-4 rounded-md shadow-sm">
       <Grid container spacing={2}>
         {images.map((img) => (
           <Grid size={{ xs: 12, sm: 6, md: 4 }} key={img.id}>

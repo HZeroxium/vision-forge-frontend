@@ -42,7 +42,7 @@ export default function ImageDetailPage() {
 
   // Navigate back to the gallery page
   const handleBack = () => {
-    router.push('/images')
+    router.push('/media/images')
   }
 
   if (loading) {
@@ -68,11 +68,24 @@ export default function ImageDetailPage() {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Button variant="outlined" onClick={handleBack} sx={{ mb: 2 }}>
+      <Button
+        variant="outlined"
+        onClick={handleBack}
+        sx={{ mb: 2 }}
+        className="hover:shadow-md transition-all"
+      >
         Back to Gallery
       </Button>
       {image && (
-        <Card>
+        <Card
+          sx={{
+            transition: 'box-shadow 0.2s ease',
+            '&:hover': {
+              boxShadow: 6,
+            },
+          }}
+          className="bg-base-100"
+        >
           <CardMedia component="img" image={image.url} alt={image.prompt} />
           <CardContent>
             <Typography variant="h5" gutterBottom>
