@@ -7,6 +7,12 @@ const Sidebar: React.FC = () => {
     <aside className="w-64 p-4 bg-gray-100">
       <nav className="space-y-2">
         <Link
+          href="/flow/generate-video"
+          className="block p-2 hover:bg-gray-200 rounded"
+        >
+          Generate Video
+        </Link>
+        <Link
           href="/media/images"
           className="block p-2 hover:bg-gray-200 rounded"
         >

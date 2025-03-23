@@ -6,6 +6,7 @@ import videoReducer from './videoSlice'
 import settingsReducer from './settingsSlice'
 import imagesReducer from './imagesSlice'
 import audiosReducer from './audiosSlice'
+import scriptsReducer from './scriptsSlice'
 
 const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ const store = configureStore({
     audios: audiosReducer,
     video: videoReducer,
     settings: settingsReducer,
+    scripts: scriptsReducer,
   },
   // Optional: middleware, devTools, etc.
 })
