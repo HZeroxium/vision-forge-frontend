@@ -9,7 +9,7 @@ export interface Video {
   userId: string
   scriptId?: string
   status: string
-  url?: string
+  url: string
   thumbnailUrl?: string
   createdAt: string
   updatedAt: string

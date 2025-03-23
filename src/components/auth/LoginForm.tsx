@@ -1,6 +1,6 @@
 // src/components/auth/LoginForm.tsx
 'use client'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useForm, SubmitHandler } from 'react-hook-form'
 import {
   Box,
@@ -18,6 +18,7 @@ import { loginAsync, clearError } from '@store/authSlice'
 import { useTranslation } from 'react-i18next'
 import { signIn } from 'next-auth/react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 interface ILoginFormInputs {
   email: string
@@ -28,6 +29,7 @@ export default function LoginForm() {
   const dispatch = useAppDispatch()
   const { loading, error, user } = useAppSelector((state) => state.auth)
   const { t } = useTranslation('auth')
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
 
   // Initialize react-hook-form
@@ -40,6 +42,13 @@ export default function LoginForm() {
   const onSubmit: SubmitHandler<ILoginFormInputs> = async (data) => {
     dispatch(loginAsync({ email: data.email, password: data.password }))
   }
+
+  // Redirect to home if already logged in
+  useEffect(() => {
+    if (user) {
+      router.push('/')
+    }
+  }, [user, router])
 
   return (
     <Box

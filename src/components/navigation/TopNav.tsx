@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next'
 import Link from 'next/link'
 import HomeIcon from '@mui/icons-material/Home'
 import PersonIcon from '@mui/icons-material/Person'
-import LockResetIcon from '@mui/icons-material/LockReset'
 import LanguageIcon from '@mui/icons-material/Language'
 import {
   AppBar,
@@ -14,14 +13,16 @@ import {
   Menu,
   MenuItem,
   Typography,
+  Button,
 } from '@mui/material'
+import { useAppSelector } from '@store/store'
+import { useRouter } from 'next/navigation'
 
-/**
- * TopNav: A simple responsive navbar with route links and language switcher.
- */
 export default function TopNav() {
   const { i18n, t } = useTranslation('auth')
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
+  const { user } = useAppSelector((state) => state.auth) // Get user from auth slice
+  const router = useRouter()
 
   const handleLangMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
@@ -32,6 +33,10 @@ export default function TopNav() {
       i18n.changeLanguage(lng)
     }
     setAnchorEl(null)
+  }
+
+  const handleProfileClick = () => {
+    router.push('/profile')
   }
 
   return (
@@ -45,23 +50,34 @@ export default function TopNav() {
           </Typography>
         </Link>
 
-        {/* Right side: Some route links + Language Switch */}
+        {/* Right side: Conditional rendering based on auth state */}
         <div className="flex items-center gap-4">
-          <Link
-            href="/auth/login"
-            className="flex items-center gap-1 no-underline"
-          >
-            <PersonIcon fontSize="small" />
-            <Typography variant="body1">{t('loginTitle')}</Typography>
-          </Link>
-
-          <Link
-            href="/auth/register"
-            className="flex items-center gap-1 no-underline"
-          >
-            <LockResetIcon fontSize="small" />
-            <Typography variant="body1">{t('registerTitle')}</Typography>
-          </Link>
+          {user ? (
+            <>
+              <Typography variant="body1">
+                {t('welcomeUser', { name: user.name || user.email })}
+              </Typography>
+              <IconButton onClick={handleProfileClick} color="inherit">
+                <PersonIcon />
+              </IconButton>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/auth/login"
+                className="flex items-center gap-1 no-underline"
+              >
+                <PersonIcon fontSize="small" />
+                <Typography variant="body1">{t('loginTitle')}</Typography>
+              </Link>
+              <Link
+                href="/auth/register"
+                className="flex items-center gap-1 no-underline"
+              >
+                <Typography variant="body1">{t('registerTitle')}</Typography>
+              </Link>
+            </>
+          )}
 
           {/* Language Switcher */}
           <IconButton

@@ -13,9 +13,9 @@ export const useAuth = () => {
     setError(null)
     try {
       const data = await authService.login({ email, password })
-      // Lưu token vào localStorage (hoặc Redux store)
+      // Save token in localStorage
       localStorage.setItem('token', data.access_token)
-      // Sau đó lấy thông tin profile
+      // Fetch user profile
       const profile = await authService.getProfile()
       setUser(profile)
     } catch (err) {
@@ -47,7 +47,7 @@ export const useAuth = () => {
     setLoading(true)
     try {
       const response = await authService.forgotPassword(email)
-      return response // chứa thông điệp và token (nếu cần dùng cho UI)
+      return response // Return the response
     } catch (err) {
       setError('Forgot password request failed.')
     } finally {
