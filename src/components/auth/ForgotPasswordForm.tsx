@@ -1,71 +1,85 @@
 // src/components/auth/ForgotPasswordForm.tsx
 'use client'
-import React, { useState, FormEvent } from 'react'
-import { Box, TextField, Typography, Button } from '@mui/material'
+import React from 'react'
+import { useForm, SubmitHandler } from 'react-hook-form'
+import {
+  Box,
+  TextField,
+  Typography,
+  Button,
+  CircularProgress,
+} from '@mui/material'
 import { useAppDispatch, useAppSelector } from '@store/store'
 import { forgotPasswordAsync, clearError } from '@store/authSlice'
+import { useTranslation } from 'react-i18next'
+import Link from 'next/link'
 
-const ForgotPasswordForm: React.FC = () => {
+interface IForgotPasswordFormInputs {
+  email: string
+}
+
+export default function ForgotPasswordForm() {
   const dispatch = useAppDispatch()
   const { loading, error } = useAppSelector((state) => state.auth)
-  const [email, setEmail] = useState('')
-  const [message, setMessage] = useState('')
+  const { t } = useTranslation('auth')
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<IForgotPasswordFormInputs>()
 
-  // Handle form submission
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const resultAction = await dispatch(forgotPasswordAsync({ email }))
-    if (forgotPasswordAsync.fulfilled.match(resultAction)) {
-      setMessage('Password reset token generated. Please check your email.')
-    }
-  }
-
-  // Clear error on input change
-  const handleInputChange = () => {
-    if (error) {
-      dispatch(clearError())
-    }
+  const onSubmit: SubmitHandler<IForgotPasswordFormInputs> = async (data) => {
+    dispatch(forgotPasswordAsync({ email: data.email }))
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Forgot Password
+    <Box
+      component="form"
+      onSubmit={handleSubmit(onSubmit)}
+      className="flex flex-col gap-4"
+    >
+      <Typography variant="h5" className="font-bold text-center mb-2">
+        {t('forgotPasswordTitle')}
       </Typography>
+
       <TextField
-        label="Email"
+        label={t('emailLabel')}
         variant="outlined"
         fullWidth
-        margin="normal"
-        value={email}
-        onChange={(e) => {
-          setEmail(e.target.value)
-          handleInputChange()
-        }}
-        required
+        {...register('email', { required: true })}
+        error={!!errors.email}
+        helperText={errors.email && t('errors.genericError')}
+        onChange={() => error && dispatch(clearError())}
       />
+
       {error && (
-        <Typography color="error" sx={{ mt: 1 }}>
+        <Typography color="error" variant="body2">
           {error}
         </Typography>
       )}
-      {message && (
-        <Typography color="primary" sx={{ mt: 1 }}>
-          {message}
-        </Typography>
-      )}
+
       <Button
         type="submit"
         variant="contained"
         color="secondary"
-        fullWidth
-        sx={{ mt: 2 }}
         disabled={loading}
       >
-        {loading ? 'Processing...' : 'Reset Password'}
+        {loading ? (
+          <CircularProgress size={20} className="text-white" />
+        ) : (
+          t('forgotPasswordButton')
+        )}
       </Button>
+
+      {/* Navigation Link */}
+      <Box className="mt-4 text-center">
+        <Typography variant="body2">
+          {t('rememberPassword')}{' '}
+          <Link href="/auth/login" className="text-primary hover:underline">
+            {t('backToLogin')}
+          </Link>
+        </Typography>
+      </Box>
     </Box>
   )
 }
-
-export default ForgotPasswordForm

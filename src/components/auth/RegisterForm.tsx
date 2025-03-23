@@ -1,88 +1,129 @@
 // src/components/auth/RegisterForm.tsx
 'use client'
-import React, { useState, FormEvent } from 'react'
-import { Box, TextField, Typography, Button } from '@mui/material'
+import React from 'react'
+import { useForm, SubmitHandler } from 'react-hook-form'
+import {
+  Box,
+  TextField,
+  Typography,
+  Button,
+  CircularProgress,
+  Divider,
+} from '@mui/material'
 import { useAppDispatch, useAppSelector } from '@store/store'
 import { registerAsync, clearError } from '@store/authSlice'
+import { useTranslation } from 'react-i18next'
+import { signIn } from 'next-auth/react'
+import Link from 'next/link'
 
-const RegisterForm: React.FC = () => {
+interface IRegisterFormInputs {
+  name: string
+  email: string
+  password: string
+}
+
+export default function RegisterForm() {
   const dispatch = useAppDispatch()
   const { loading, error } = useAppSelector((state) => state.auth)
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const { t } = useTranslation('auth')
 
-  // Handle form submission
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    dispatch(registerAsync({ email, password, name }))
-  }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<IRegisterFormInputs>()
 
-  // Clear error on input change
-  const handleInputChange = () => {
-    if (error) {
-      dispatch(clearError())
-    }
+  const onSubmit: SubmitHandler<IRegisterFormInputs> = (data) => {
+    dispatch(
+      registerAsync({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+      })
+    )
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Register
+    <Box
+      component="form"
+      onSubmit={handleSubmit(onSubmit)}
+      className="flex flex-col gap-4"
+    >
+      <Typography variant="h5" className="font-bold text-center mb-2">
+        {t('registerTitle')}
       </Typography>
+
       <TextField
-        label="Name"
+        label={t('nameLabel')}
         variant="outlined"
         fullWidth
-        margin="normal"
-        value={name}
-        onChange={(e) => {
-          setName(e.target.value)
-          handleInputChange()
-        }}
+        {...register('name', { required: true })}
+        error={!!errors.name}
+        helperText={errors.name && t('errors.genericError')}
+        onChange={() => error && dispatch(clearError())}
       />
+
       <TextField
-        label="Email"
+        label={t('emailLabel')}
         variant="outlined"
         fullWidth
-        margin="normal"
-        value={email}
-        onChange={(e) => {
-          setEmail(e.target.value)
-          handleInputChange()
-        }}
-        required
+        {...register('email', { required: true })}
+        error={!!errors.email}
+        helperText={errors.email && t('errors.genericError')}
+        onChange={() => error && dispatch(clearError())}
       />
+
       <TextField
-        label="Password"
+        label={t('passwordLabel')}
+        variant="outlined"
+        fullWidth
         type="password"
-        variant="outlined"
-        fullWidth
-        margin="normal"
-        value={password}
-        onChange={(e) => {
-          setPassword(e.target.value)
-          handleInputChange()
-        }}
-        required
+        {...register('password', { required: true })}
+        error={!!errors.password}
+        helperText={errors.password && t('errors.genericError')}
+        onChange={() => error && dispatch(clearError())}
       />
+
       {error && (
-        <Typography color="error" sx={{ mt: 1 }}>
+        <Typography color="error" variant="body2">
           {error}
         </Typography>
       )}
+
       <Button
         type="submit"
         variant="contained"
         color="primary"
-        fullWidth
-        sx={{ mt: 2 }}
         disabled={loading}
       >
-        {loading ? 'Registering...' : 'Register'}
+        {loading ? (
+          <CircularProgress size={20} className="text-white" />
+        ) : (
+          t('registerButton')
+        )}
       </Button>
+
+      <Divider sx={{ my: 1 }}>or</Divider>
+
+      {/* Google Register Button */}
+      <Button
+        variant="outlined"
+        color="secondary"
+        onClick={() => signIn('google')}
+        className="normal-case"
+      >
+        {t('loginWithGoogle')}
+      </Button>
+
+      {/* Navigation Link */}
+      <Box className="mt-4 text-center">
+        <Typography variant="body2">
+          {t('alreadyHaveAccount')}{' '}
+          <Link href="/auth/login" className="text-primary hover:underline">
+            {t('loginHere')}
+          </Link>
+        </Typography>
+      </Box>
     </Box>
   )
 }
-
-export default RegisterForm

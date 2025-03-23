@@ -1,6 +1,12 @@
 // src/components/media/AudioGallery.tsx
 import React, { useEffect } from 'react'
-import { Typography, CircularProgress, Box, Pagination } from '@mui/material'
+import {
+  Typography,
+  CircularProgress,
+  Box,
+  Pagination,
+  Button,
+} from '@mui/material'
 import Grid from '@mui/material/Grid2'
 import { useAudios } from '@hooks/useAudios'
 import AudioCard from './AudioCard'
@@ -10,19 +16,17 @@ const AudioGallery: React.FC = () => {
 
   // Load audios when the component mounts
   useEffect(() => {
-    loadAudios(page, 10)
-  }, [loadAudios, page])
+    // Only fetch audios if there is no error to prevent auto-retry spam
+    if (!error) {
+      loadAudios(page, 10)
+    }
+  }, [loadAudios, page, error])
 
   const handlePageChange = (
     event: React.ChangeEvent<unknown>,
     value: number
   ) => {
     loadAudios(value, 10)
-  }
-
-  // Optional: Handle play audio function (e.g., open a modal with an audio player)
-  const handlePlay = (url: string) => {
-    window.open(url, '_blank')
   }
 
   // Optional: Handle delete audio (dispatch a delete action here)
@@ -41,9 +45,22 @@ const AudioGallery: React.FC = () => {
 
   if (error) {
     return (
-      <Typography color="error" align="center" mt={4}>
-        {error}
-      </Typography>
+      <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
+        <Typography variant="h6" color="error">
+          Oops! Failed to load audios.
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          {error}
+        </Typography>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={() => loadAudios(page, 10)}
+          sx={{ mt: 2 }}
+        >
+          Retry
+        </Button>
+      </Box>
     )
   }
 
@@ -52,11 +69,7 @@ const AudioGallery: React.FC = () => {
       <Grid container spacing={2}>
         {audios.map((audio) => (
           <Grid size={{ xs: 12, sm: 6, md: 4 }} key={audio.id}>
-            <AudioCard
-              audio={audio}
-              onPlay={handlePlay}
-              onDelete={handleDelete}
-            />
+            <AudioCard audio={audio} onDelete={handleDelete} />
           </Grid>
         ))}
       </Grid>

@@ -13,14 +13,8 @@ const Header: React.FC = () => {
         className="text-xl font-bold cursor-pointer"
         onClick={() => router.push('/')}
       >
-        Vision Forge
+        {/* Vision Forge */}
       </h1>
-      <Button
-        onClick={() => router.push('/dashboard')}
-        className="bg-white text-blue-600"
-      >
-        Dashboard
-      </Button>
     </header>
   )
 }

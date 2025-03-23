@@ -2,6 +2,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import * as audiosService from '@services/audiosService'
 import type { Audio, AudiosPaginationDto } from '@services/audiosService'
+import type { RootState } from './store'
 
 export interface AudiosState {
   audios: Audio[]
@@ -25,6 +26,7 @@ const initialState: AudiosState = {
 
 /**
  * Async thunk to fetch audios with pagination.
+ * Added condition to prevent duplicate calls while loading.
  */
 export const fetchAudiosAsync = createAsyncThunk(
   'audios/fetchAudios',
@@ -43,6 +45,14 @@ export const fetchAudiosAsync = createAsyncThunk(
         error.response?.data?.message || 'Failed to fetch audios'
       )
     }
+  },
+  {
+    condition: (params, { getState }) => {
+      const state = getState() as RootState
+      // Prevent fetching if audios are already being loaded
+      if (state.audios.loading) return false
+      return true
+    },
   }
 )
 

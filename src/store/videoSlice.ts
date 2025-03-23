@@ -2,6 +2,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import * as videoService from '@services/videoService'
 import type { Video, VideosPaginationDto } from '@services/videoService'
+import type { RootState } from './store'
 
 export interface VideoState {
   videos: Video[]
@@ -25,6 +26,7 @@ const initialState: VideoState = {
 
 /**
  * Async thunk to fetch paginated videos.
+ * Added condition to prevent duplicate calls while loading.
  */
 export const fetchVideosAsync = createAsyncThunk(
   'videos/fetchVideos',
@@ -43,6 +45,14 @@ export const fetchVideosAsync = createAsyncThunk(
         error.response?.data?.message || 'Failed to fetch videos'
       )
     }
+  },
+  {
+    condition: (params, { getState }) => {
+      const state = getState() as RootState
+      // Prevent fetching if videos are already being loaded
+      if (state.video.loading) return false
+      return true
+    },
   }
 )
 

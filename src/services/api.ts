@@ -1,8 +1,9 @@
 // src/services/api.ts
 import axios from 'axios'
+import env from '@/config/env'
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api', // Base URL from env
+  baseURL: env.API_URL, // Base URL from env
   headers: {
     'Content-Type': 'application/json',
   },
@@ -26,7 +27,13 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // <TODO>: Add global error handling if needed
+    if (error.code === 'ECONNABORTED') {
+      console.error('Request timed out')
+    } else if (!error.response) {
+      console.error('Network error: Backend unreachable') // 🌐
+    } else {
+      console.error('API Error:', error.response.data)
+    }
     return Promise.reject(error)
   }
 )

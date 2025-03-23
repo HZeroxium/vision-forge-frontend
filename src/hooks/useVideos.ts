@@ -1,4 +1,5 @@
 // src/hooks/useVideos.ts
+import { useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import type { RootState, AppDispatch } from '@store/store'
 import { fetchVideosAsync, clearVideoError } from '@store/videoSlice'
@@ -7,19 +8,18 @@ export const useVideos = () => {
   const dispatch = useDispatch<AppDispatch>()
   const videoState = useSelector((state: RootState) => state.video)
 
-  /**
-   * Loads videos with optional pagination parameters.
-   */
-  const loadVideos = (page?: number, limit?: number) => {
-    dispatch(fetchVideosAsync({ page, limit }))
-  }
+  // Memoize loadVideos to avoid re-creation on each render
+  const loadVideos = useCallback(
+    (page?: number, limit?: number) => {
+      dispatch(fetchVideosAsync({ page, limit }))
+    },
+    [dispatch]
+  )
 
-  /**
-   * Clears any video-related error.
-   */
-  const clearError = () => {
+  // Memoize clearError to avoid unnecessary re-creation
+  const clearError = useCallback(() => {
     dispatch(clearVideoError())
-  }
+  }, [dispatch])
 
   return { ...videoState, loadVideos, clearError }
 }

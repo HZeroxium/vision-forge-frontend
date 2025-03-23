@@ -1,6 +1,12 @@
 // src/components/video/VideoGallery.tsx
 import React, { useEffect } from 'react'
-import { Typography, CircularProgress, Box, Pagination } from '@mui/material'
+import {
+  Typography,
+  CircularProgress,
+  Box,
+  Pagination,
+  Button,
+} from '@mui/material'
 import Grid from '@mui/material/Grid2'
 import { useVideos } from '@hooks/useVideos'
 import VideoCard from './VideoCard'
@@ -10,21 +16,17 @@ const VideoGallery: React.FC = () => {
 
   // Load videos when the component mounts or when page changes
   useEffect(() => {
-    loadVideos(page, 10)
-  }, [loadVideos, page])
+    // Only fetch videos if there is no error to prevent auto-retry spam
+    if (!error) {
+      loadVideos(page, 10)
+    }
+  }, [loadVideos, page, error])
 
   const handlePageChange = (
     event: React.ChangeEvent<unknown>,
     value: number
   ) => {
     loadVideos(value, 10)
-  }
-
-  // Handle preview button – open video URL in a new window or modal
-  const handlePreview = (url?: string) => {
-    if (url) {
-      window.open(url, '_blank')
-    }
   }
 
   // Handle delete button (to be implemented)
@@ -43,9 +45,22 @@ const VideoGallery: React.FC = () => {
 
   if (error) {
     return (
-      <Typography color="error" align="center" mt={4}>
-        {error}
-      </Typography>
+      <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
+        <Typography variant="h6" color="error">
+          Oops! Failed to load images.
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          {error}
+        </Typography>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={() => loadVideos(page, 10)}
+          sx={{ mt: 2 }}
+        >
+          Retry
+        </Button>
+      </Box>
     )
   }
 
@@ -54,11 +69,7 @@ const VideoGallery: React.FC = () => {
       <Grid container spacing={2}>
         {videos.map((video) => (
           <Grid size={{ xs: 12, sm: 6, md: 4 }} key={video.id}>
-            <VideoCard
-              video={video}
-              onPreview={handlePreview}
-              onDelete={handleDelete}
-            />
+            <VideoCard video={video} onDelete={handleDelete} />
           </Grid>
         ))}
       </Grid>

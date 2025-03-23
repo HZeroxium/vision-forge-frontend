@@ -4,7 +4,6 @@ import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux'
 import authReducer from './authSlice'
 import videoReducer from './videoSlice'
 import settingsReducer from './settingsSlice'
-import ttsReducer from './ttsSlice'
 import imagesReducer from './imagesSlice'
 import audiosReducer from './audiosSlice'
 
@@ -15,7 +14,6 @@ const store = configureStore({
     audios: audiosReducer,
     video: videoReducer,
     settings: settingsReducer,
-    tts: ttsReducer,
   },
   // Optional: middleware, devTools, etc.
 })
