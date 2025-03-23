@@ -13,31 +13,42 @@ import Link from 'next/link'
 
 interface VideoCardProps {
   video: Video
-  onPreview?: (url?: string) => void
   onDelete?: (id: string) => void
 }
 
-const VideoCard: React.FC<VideoCardProps> = ({
-  video,
-  onPreview,
-  onDelete,
-}) => {
+const VideoCard: React.FC<VideoCardProps> = ({ video, onDelete }) => {
   return (
-    <Link href={`/videos/${video.id}`} passHref legacyBehavior>
+    <Link href={`/media/videos/${video.id}`} passHref legacyBehavior>
       <a style={{ textDecoration: 'none' }}>
-        <Card sx={{ maxWidth: 345 }}>
-          {video.thumbnailUrl ? (
+        <Card
+          sx={{
+            maxWidth: 345,
+            cursor: 'pointer',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            '&:hover': { transform: 'scale(1.02)', boxShadow: 6 },
+          }}
+          className="bg-base-100"
+        >
+          {/* CHANGED: Use CardMedia with component="video" to embed video player directly */}
+          {video.url ? (
             <CardMedia
-              component="img"
+              component="video"
+              controls
               height="200"
-              image={video.thumbnailUrl}
-              alt="Video thumbnail"
+              src={video.url}
+              poster={
+                video.thumbnailUrl ? video.thumbnailUrl : '/images/logo.webp'
+              } // Fallback thumbnail
+              sx={{ objectFit: 'cover' }}
             />
           ) : (
+            // Fallback: display thumbnail image if no video URL provided
             <CardMedia
               component="img"
               height="200"
-              image="/images/logo.webp" // Fallback image
+              image={
+                video.thumbnailUrl ? video.thumbnailUrl : '/images/logo.webp'
+              }
               alt="Placeholder thumbnail"
             />
           )}
@@ -56,22 +67,20 @@ const VideoCard: React.FC<VideoCardProps> = ({
               Created: {new Date(video.createdAt).toLocaleDateString()}
             </Typography>
           </CardContent>
-          <CardActions>
-            {onPreview && (
-              <Button size="small" onClick={() => onPreview(video.url)}>
-                Preview
-              </Button>
-            )}
-            {onDelete && (
+          {onDelete && (
+            <CardActions>
               <Button
                 size="small"
                 color="error"
-                onClick={() => onDelete(video.id)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete(video.id)
+                }}
               >
                 Delete
               </Button>
-            )}
-          </CardActions>
+            </CardActions>
+          )}
         </Card>
       </a>
     </Link>

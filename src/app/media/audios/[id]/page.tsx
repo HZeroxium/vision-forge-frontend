@@ -1,4 +1,4 @@
-// src/app/audio/[id]/page.tsx
+// src/app/media/audio/[id]/page.tsx
 'use client'
 
 import React, { useEffect, useState } from 'react'
@@ -12,6 +12,7 @@ import {
   Card,
   CardContent,
   CardActions,
+  CardMedia,
 } from '@mui/material'
 import { fetchAudio } from '@services/audiosService'
 import type { Audio } from '@services/audiosService'
@@ -42,7 +43,7 @@ export default function AudioDetailPage() {
 
   // Navigate back to the audios list page
   const handleBack = () => {
-    router.push('/audios')
+    router.push('/media/audios')
   }
 
   if (loading) {
@@ -68,11 +69,31 @@ export default function AudioDetailPage() {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Button variant="outlined" onClick={handleBack} sx={{ mb: 2 }}>
+      <Button
+        variant="outlined"
+        onClick={handleBack}
+        sx={{ mb: 2 }}
+        className="hover:shadow-md transition-all"
+      >
         Back to Audio Library
       </Button>
       {audio && (
-        <Card>
+        <Card
+          sx={{
+            transition: 'box-shadow 0.2s ease',
+            '&:hover': { boxShadow: 6 },
+          }}
+          className="bg-base-100"
+        >
+          {/* Optionally, if you want to display a cover image: */}
+          {audio.url && (
+            <CardMedia
+              component="img"
+              image="images/logo.webp" // In case audio provider also has a cover image URL; otherwise, remove this block
+              alt={audio.provider}
+              sx={{ display: 'none' }} // Hide if not needed
+            />
+          )}
           <CardContent>
             <Typography variant="h5" gutterBottom>
               Provider: {audio.provider}
@@ -98,18 +119,16 @@ export default function AudioDetailPage() {
             >
               Updated at: {new Date(audio.updatedAt).toLocaleString()}
             </Typography>
+            {/* CHANGED START: Embedded inline audio player */}
+            <Box sx={{ mt: 2 }}>
+              <audio controls style={{ width: '100%' }}>
+                <source src={audio.url} type="audio/mp3" />
+                Your browser does not support the audio element.
+              </audio>
+            </Box>
+            {/* CHANGED END */}
           </CardContent>
-          <CardActions>
-            <Button
-              variant="contained"
-              onClick={() => {
-                // Open audio URL in a new tab to play the audio
-                if (audio.url) window.open(audio.url, '_blank')
-              }}
-            >
-              Play Audio
-            </Button>
-          </CardActions>
+          {/* Optionally, you may add CardActions for additional controls */}
         </Card>
       )}
     </Container>

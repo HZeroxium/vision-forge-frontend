@@ -43,14 +43,7 @@ export default function VideoDetailPage() {
 
   // Navigate back to the video library page
   const handleBack = () => {
-    router.push('/videos')
-  }
-
-  // Handle preview – open video URL in a new window (or later open in modal)
-  const handlePreview = () => {
-    if (video?.url) {
-      window.open(video.url, '_blank')
-    }
+    router.push('/media/videos')
   }
 
   if (loading) {
@@ -76,26 +69,44 @@ export default function VideoDetailPage() {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Button variant="outlined" onClick={handleBack} sx={{ mb: 2 }}>
+      <Button
+        variant="outlined"
+        onClick={handleBack}
+        sx={{ mb: 2 }}
+        className="hover:shadow-md transition-all"
+      >
         Back to Video Library
       </Button>
       {video && (
-        <Card>
-          {video.thumbnailUrl ? (
-            <CardMedia
-              component="img"
-              image={video.thumbnailUrl}
-              alt="Video Thumbnail"
-              sx={{ height: 300 }}
-            />
+        <Card
+          sx={{
+            transition: 'box-shadow 0.2s ease',
+            '&:hover': { boxShadow: 6 },
+          }}
+          className="bg-base-100"
+        >
+          {/* CHANGED START: Embed inline video player in detail page */}
+          {video.url ? (
+            <Box sx={{ position: 'relative', height: 0, paddingTop: '56.25%' }}>
+              <video
+                controls
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+              >
+                <source src={video.url} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+            </Box>
           ) : (
-            <CardMedia
-              component="img"
-              image="/images/banner.webp" // Fallback image
-              alt="Placeholder Thumbnail"
-              sx={{ height: 300 }}
-            />
+            <Box sx={{ height: 300, backgroundColor: '#000' }} />
           )}
+          {/* CHANGED END */}
           <CardContent>
             <Typography variant="h5" gutterBottom>
               Video ID: {video.id}
@@ -117,9 +128,7 @@ export default function VideoDetailPage() {
             </Typography>
           </CardContent>
           <CardActions>
-            <Button variant="contained" onClick={handlePreview}>
-              Preview Video
-            </Button>
+            {/* Optionally, additional actions can be added here */}
           </CardActions>
         </Card>
       )}

@@ -1,4 +1,4 @@
-// src/app/audios/page.tsx
+// src/app/media/audios/page.tsx
 'use client'
 import React from 'react'
 import { Container, Typography } from '@mui/material'

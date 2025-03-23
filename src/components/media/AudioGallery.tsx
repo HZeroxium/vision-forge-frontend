@@ -29,11 +29,6 @@ const AudioGallery: React.FC = () => {
     loadAudios(value, 10)
   }
 
-  // Optional: Handle play audio function (e.g., open a modal with an audio player)
-  const handlePlay = (url: string) => {
-    window.open(url, '_blank')
-  }
-
   // Optional: Handle delete audio (dispatch a delete action here)
   const handleDelete = (id: string) => {
     // Implement deletion logic (e.g., dispatch deleteAudioAsync)
@@ -74,11 +69,7 @@ const AudioGallery: React.FC = () => {
       <Grid container spacing={2}>
         {audios.map((audio) => (
           <Grid size={{ xs: 12, sm: 6, md: 4 }} key={audio.id}>
-            <AudioCard
-              audio={audio}
-              onPlay={handlePlay}
-              onDelete={handleDelete}
-            />
+            <AudioCard audio={audio} onDelete={handleDelete} />
           </Grid>
         ))}
       </Grid>

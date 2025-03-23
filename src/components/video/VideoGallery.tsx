@@ -29,13 +29,6 @@ const VideoGallery: React.FC = () => {
     loadVideos(value, 10)
   }
 
-  // Handle preview button – open video URL in a new window or modal
-  const handlePreview = (url?: string) => {
-    if (url) {
-      window.open(url, '_blank')
-    }
-  }
-
   // Handle delete button (to be implemented)
   const handleDelete = (id: string) => {
     // Implement deletion logic, e.g., dispatch a deleteVideoAsync action
@@ -76,11 +69,7 @@ const VideoGallery: React.FC = () => {
       <Grid container spacing={2}>
         {videos.map((video) => (
           <Grid size={{ xs: 12, sm: 6, md: 4 }} key={video.id}>
-            <VideoCard
-              video={video}
-              onPreview={handlePreview}
-              onDelete={handleDelete}
-            />
+            <VideoCard video={video} onDelete={handleDelete} />
           </Grid>
         ))}
       </Grid>
