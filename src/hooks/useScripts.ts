@@ -6,6 +6,7 @@ import {
   createScriptAsync,
   updateScriptAsync,
   fetchScriptAsync,
+  deleteScriptAsync,
   clearScriptError,
   resetScript,
 } from '@store/scriptsSlice'
@@ -16,7 +17,7 @@ export const useScripts = () => {
 
   // Memoized function to create script
   const createScript = useCallback(
-    (data: { title: string; style?: string }) => {
+    (data: { title: string; style?: string; language?: string }) => {
       dispatch(createScriptAsync(data))
     },
     [dispatch]
@@ -41,6 +42,13 @@ export const useScripts = () => {
     [dispatch]
   )
 
+  const deleteScript = useCallback(
+    (id: string) => {
+      dispatch(deleteScriptAsync(id))
+    },
+    [dispatch]
+  )
+
   const clearError = useCallback(() => {
     dispatch(clearScriptError())
   }, [dispatch])
@@ -54,6 +62,7 @@ export const useScripts = () => {
     createScript,
     updateScript,
     fetchScript,
+    deleteScript,
     clearError,
     resetScriptState,
   }

@@ -73,6 +73,20 @@ export const fetchScriptAsync = createAsyncThunk(
   }
 )
 
+export const deleteScriptAsync = createAsyncThunk(
+  'scripts/deleteScript',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const script = await scriptService.deleteScript(id)
+      return script
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Failed to delete script'
+      )
+    }
+  }
+)
+
 const scriptsSlice = createSlice({
   name: 'scripts',
   initialState,
@@ -135,6 +149,22 @@ const scriptsSlice = createSlice({
       .addCase(fetchScriptAsync.rejected, (state, action) => {
         state.loading = false
         state.error = (action.payload as string) || 'Failed to fetch script'
+      })
+      // [ADDED] Delete script handling
+      .addCase(deleteScriptAsync.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(
+        deleteScriptAsync.fulfilled,
+        (state, action: PayloadAction<Script>) => {
+          state.loading = false
+          state.script = null // Reset script after deletion
+        }
+      )
+      .addCase(deleteScriptAsync.rejected, (state, action) => {
+        state.loading = false
+        state.error = (action.payload as string) || 'Failed to delete script'
       })
   },
 })

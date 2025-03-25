@@ -6,6 +6,7 @@ export interface Script {
   title: string
   content: string
   style: string
+  language: string
   createdAt: string
   updatedAt: string
 }
@@ -24,6 +25,7 @@ export interface ScriptsPaginationDto {
 export const createScript = async (data: {
   title: string
   style?: string
+  language?: string
 }): Promise<Script> => {
   const response = await api.post('/scripts', data)
   return response.data
