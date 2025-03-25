@@ -8,14 +8,20 @@ import {
   Typography,
   CircularProgress,
   Box,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
 } from '@mui/material'
 import { useScripts } from '@hooks/useScripts'
-import { generateVideoFlow } from '@services/flowService'
-import { Video } from '@/services/videoService'
+import { generateVideoFlow, previewAudio } from '@services/flowService'
+import { Video } from '@services/videoService'
 
 export default function GenerateVideoFlowPage() {
   // Local state for form and process management
   const [title, setTitle] = useState('')
+  const [selectedContentStyle, setSelectedContentStyle] = useState('default')
+  const [selectedLanguage, setSelectedLanguage] = useState('vi')
   const [localContent, setLocalContent] = useState('')
   const [step, setStep] = useState<
     'initial' | 'editing' | 'generating' | 'generated'
@@ -24,10 +30,36 @@ export default function GenerateVideoFlowPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // Use our custom script hook to manage script state
-  const { script, createScript, updateScript, resetScriptState } = useScripts()
+  // Audio configuration state
+  const [audioSpeed, setAudioSpeed] = useState(1) // default 1x
+  const [audioVoice, setAudioVoice] = useState('Default Voice')
+  const [audioInstructions, setAudioInstructions] = useState('Clear')
+  const [previewAudioUrl, setPreviewAudioUrl] = useState<string | null>(null)
 
-  // Handler: Create a new script from title input.
+  // Dropdown options
+  const contentStyleOptions = ['default', 'child', 'professional', 'in-depth']
+  const languageOptions = [
+    { value: 'en', label: 'English' },
+    { value: 'vi', label: 'Vietnamese' },
+    { value: 'es', label: 'Spanish' },
+    { value: 'fr', label: 'French' },
+    { value: 'de', label: 'German' },
+  ]
+  const audioSpeedOptions = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4]
+  const audioVoiceOptions = [
+    'Default Voice',
+    'Male',
+    'Female',
+    'Narrator',
+    'Young',
+  ]
+  const audioInstructionsOptions = ['Clear', 'Dramatic', 'Calm', 'Energetic']
+
+  // Use our custom script hook to manage script state
+  const { script, createScript, updateScript, deleteScript, resetScriptState } =
+    useScripts()
+
+  // Handler: Create a new script from title input and selected style.
   const handleCreateScript = async () => {
     if (!title) {
       setError('Title is required')
@@ -36,8 +68,8 @@ export default function GenerateVideoFlowPage() {
     setError(null)
     setLoading(true)
     try {
-      await createScript({ title, style: 'default' })
-      // Khi script được tạo, useScripts sẽ lưu script trong state.
+      await createScript({ title, style: selectedContentStyle })
+      // When script is created, useScripts will store it in state.
     } catch (err: any) {
       setError('Failed to create script')
     } finally {
@@ -45,7 +77,7 @@ export default function GenerateVideoFlowPage() {
     }
   }
 
-  // Khi script được tạo, cập nhật localContent và chuyển bước sang editing.
+  // When script is created, update localContent and switch to editing step.
   useEffect(() => {
     if (script) {
       setLocalContent(script.content)
@@ -53,10 +85,10 @@ export default function GenerateVideoFlowPage() {
     }
   }, [script])
 
-  // Handler: Update script nếu nội dung đã được chỉnh sửa.
+  // Handler: Update script if content has been edited.
   const handleUpdateScript = async () => {
     if (!script) return
-    // Nếu không có thay đổi thì bỏ qua.
+    // If no change, skip update.
     if (localContent === script.content) return
     setLoading(true)
     try {
@@ -68,10 +100,46 @@ export default function GenerateVideoFlowPage() {
     }
   }
 
-  // Handler: Gọi API flow để generate video.
+  const handleDeleteScript = async () => {
+    if (!script) return
+    setLoading(true)
+    try {
+      await deleteScript(script.id)
+      // Reset state to allow user to create a new script from scratch.
+      setTitle('')
+      setSelectedContentStyle('default')
+      setSelectedLanguage('en')
+      setLocalContent('')
+      setStep('initial')
+    } catch (err: any) {
+      setError('Failed to delete script')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Handler: Preview audio based on selected audio configuration.
+  const handlePreviewAudio = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await previewAudio({
+        speed: audioSpeed,
+        voice: audioVoice,
+        instructions: audioInstructions,
+      })
+      setPreviewAudioUrl(response.url)
+    } catch (err: any) {
+      setError('Failed to preview audio')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Handler: Call API flow to generate video.
   const handleGenerateVideo = async () => {
     if (!script) return
-    // Nếu nội dung đã thay đổi, cập nhật trước khi generate.
+    // Update script if content has been edited.
     if (localContent !== script.content) {
       await handleUpdateScript()
     }
@@ -89,11 +157,13 @@ export default function GenerateVideoFlowPage() {
     }
   }
 
-  // Handler: Reset lại flow để thực hiện lần mới.
+  // Handler: Reset flow for a new generation.
   const handleReset = () => {
     setTitle('')
+    setSelectedContentStyle('default')
     setLocalContent('')
     setVideoUrl(null)
+    setPreviewAudioUrl(null)
     setStep('initial')
     resetScriptState()
   }
@@ -125,6 +195,36 @@ export default function GenerateVideoFlowPage() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
+          <FormControl fullWidth>
+            <InputLabel id="content-style-label">Content Style</InputLabel>
+            <Select
+              labelId="content-style-label"
+              label="Content Style"
+              value={selectedContentStyle}
+              onChange={(e) => setSelectedContentStyle(e.target.value)}
+            >
+              {contentStyleOptions.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option.charAt(0).toUpperCase() + option.slice(1)}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth>
+            <InputLabel id="language-label">Language</InputLabel>
+            <Select
+              labelId="language-label"
+              label="Language"
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+            >
+              {languageOptions.map((lang) => (
+                <MenuItem key={lang.value} value={lang.value}>
+                  {lang.label.toUpperCase()}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <Button variant="contained" onClick={handleCreateScript}>
             Generate Script
           </Button>
@@ -143,9 +243,82 @@ export default function GenerateVideoFlowPage() {
             value={localContent}
             onChange={(e) => setLocalContent(e.target.value)}
           />
+
+          {/* Audio Configuration Section */}
+          <Typography variant="h6">Audio Configuration</Typography>
+          <Box display="flex" flexDirection="column" gap={2}>
+            <FormControl fullWidth>
+              <InputLabel id="audio-speed-label">Audio Speed</InputLabel>
+              <Select
+                labelId="audio-speed-label"
+                label="Audio Speed"
+                value={audioSpeed}
+                onChange={(e) => setAudioSpeed(Number(e.target.value))}
+              >
+                {audioSpeedOptions.map((speed) => (
+                  <MenuItem key={speed} value={speed}>
+                    {speed}x
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth>
+              <InputLabel id="audio-voice-label">Audio Voice</InputLabel>
+              <Select
+                labelId="audio-voice-label"
+                label="Audio Voice"
+                value={audioVoice}
+                onChange={(e) => setAudioVoice(e.target.value)}
+              >
+                {audioVoiceOptions.map((voice) => (
+                  <MenuItem key={voice} value={voice}>
+                    {voice}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth>
+              <InputLabel id="audio-instructions-label">
+                Audio Instructions
+              </InputLabel>
+              <Select
+                labelId="audio-instructions-label"
+                label="Audio Instructions"
+                value={audioInstructions}
+                onChange={(e) => setAudioInstructions(e.target.value)}
+              >
+                {audioInstructionsOptions.map((instr) => (
+                  <MenuItem key={instr} value={instr}>
+                    {instr}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <Button variant="outlined" onClick={handlePreviewAudio}>
+              Preview Audio
+            </Button>
+
+            {previewAudioUrl && (
+              <Box>
+                <Typography variant="body2">Audio Preview:</Typography>
+                <audio controls src={previewAudioUrl} />
+              </Box>
+            )}
+          </Box>
+
           <Box display="flex" gap={2}>
             <Button variant="outlined" onClick={handleUpdateScript}>
               Update Script
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={handleDeleteScript}
+            >
+              Delete Script
             </Button>
             <Button variant="contained" onClick={handleGenerateVideo}>
               Generate Video
