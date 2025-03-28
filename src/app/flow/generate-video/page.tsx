@@ -13,24 +13,45 @@ import {
   FormControl,
   InputLabel,
 } from '@mui/material'
+import Grid from '@mui/material/Grid2'
 import { useScripts } from '@hooks/useScripts'
-import { generateVideoFlow, previewAudio } from '@services/flowService'
+import {
+  generateImages,
+  generateVideoFlow,
+  previewAudio,
+} from '@services/flowService'
 import { Video } from '@services/videoService'
 
+type Step = 'script' | 'images' | 'videoGenerated'
+
 export default function GenerateVideoFlowPage() {
-  // Local state for form and process management
+  // Step management: "script" (step 1), "images" (step 2), "videoGenerated" (step 3)
+  const [step, setStep] = useState<Step>('script')
+
+  // Local state for Step 1 – Script Creation & Editing
   const [title, setTitle] = useState('')
   const [selectedContentStyle, setSelectedContentStyle] = useState('default')
   const [selectedLanguage, setSelectedLanguage] = useState('vi')
   const [localContent, setLocalContent] = useState('')
-  const [step, setStep] = useState<
-    'initial' | 'editing' | 'generating' | 'generated'
-  >('initial')
+
+  // Local state for Step 2 – Image Generation & Per-Image Script Editing
+  const [imagesData, setImagesData] = useState<{
+    image_urls: string[]
+    scripts: string[]
+  } | null>(null)
+
+  // Local state for Step 3 – Video Generation
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
+
+  // Global state from script hook
+  const { script, createScript, updateScript, deleteScript, resetScriptState } =
+    useScripts()
+
+  // Local error & loading state
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // Audio configuration state
+  // Audio configuration state (không được sử dụng trong bước 3 nhưng vẫn giữ cho tính năng preview audio)
   const [audioSpeed, setAudioSpeed] = useState(1) // default 1x
   const [audioVoice, setAudioVoice] = useState('Default Voice')
   const [audioInstructions, setAudioInstructions] = useState('Clear')
@@ -55,11 +76,7 @@ export default function GenerateVideoFlowPage() {
   ]
   const audioInstructionsOptions = ['Clear', 'Dramatic', 'Calm', 'Energetic']
 
-  // Use our custom script hook to manage script state
-  const { script, createScript, updateScript, deleteScript, resetScriptState } =
-    useScripts()
-
-  // Handler: Create a new script from title input and selected style.
+  // --- STEP 1: Script Creation & Editing ---
   const handleCreateScript = async () => {
     if (!title) {
       setError('Title is required')
@@ -69,7 +86,7 @@ export default function GenerateVideoFlowPage() {
     setLoading(true)
     try {
       await createScript({ title, style: selectedContentStyle })
-      // When script is created, useScripts will store it in state.
+      // Khi script được tạo, hook sẽ lưu script vào state.
     } catch (err: any) {
       setError('Failed to create script')
     } finally {
@@ -77,18 +94,15 @@ export default function GenerateVideoFlowPage() {
     }
   }
 
-  // When script is created, update localContent and switch to editing step.
+  // Khi script được tạo, cập nhật localContent và chuyển bước sang editing (step 1 hoàn tất).
   useEffect(() => {
     if (script) {
       setLocalContent(script.content)
-      setStep('editing')
     }
   }, [script])
 
-  // Handler: Update script if content has been edited.
   const handleUpdateScript = async () => {
     if (!script) return
-    // If no change, skip update.
     if (localContent === script.content) return
     setLoading(true)
     try {
@@ -100,25 +114,95 @@ export default function GenerateVideoFlowPage() {
     }
   }
 
-  const handleDeleteScript = async () => {
-    if (!script) return
+  // Khi người dùng xác nhận script, chuyển sang bước 2.
+  const handleProceedToImages = async () => {
+    // Nếu có thay đổi, cập nhật script trước.
+    if (localContent !== script?.content) {
+      await handleUpdateScript()
+    }
     setLoading(true)
+    setError(null)
     try {
-      await deleteScript(script.id)
-      // Reset state to allow user to create a new script from scratch.
-      setTitle('')
-      setSelectedContentStyle('default')
-      setSelectedLanguage('en')
-      setLocalContent('')
-      setStep('initial')
+      // Gọi API generateImages với content và style từ script.
+      const imagesResponse = await generateImages({
+        content: localContent,
+        style: selectedContentStyle,
+      })
+      setImagesData(imagesResponse)
+      setStep('images')
     } catch (err: any) {
-      setError('Failed to delete script')
+      setError('Failed to generate images')
     } finally {
       setLoading(false)
     }
   }
 
-  // Handler: Preview audio based on selected audio configuration.
+  // Handler: Cho phép người dùng chỉnh sửa script cho từng image.
+  const handleEditImageScript = (index: number, newScript: string) => {
+    if (imagesData) {
+      const newScripts = [...imagesData.scripts]
+      newScripts[index] = newScript
+      setImagesData({ ...imagesData, scripts: newScripts })
+    }
+  }
+
+  // Handler: Regenerate images (gọi lại API generateImages) cho bước 2.
+  const handleRegenerateImages = async () => {
+    if (!localContent) return
+    setLoading(true)
+    setError(null)
+    try {
+      const imagesResponse = await generateImages({
+        content: localContent,
+        style: selectedContentStyle,
+      })
+      setImagesData(imagesResponse)
+    } catch (err: any) {
+      setError('Failed to regenerate images')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // --- STEP 3: Confirm & Generate Video ---
+  const handleGenerateVideo = async () => {
+    if (!script || !imagesData) return
+    // Nếu có thay đổi trong script, cập nhật trước.
+    if (localContent !== script.content) {
+      await handleUpdateScript()
+    }
+    setLoading(true)
+    setError(null)
+    try {
+      // Gọi API generateVideoFlow với scriptId, imageUrls, và scripts (có thể đã chỉnh sửa)
+      const videoResponse = await generateVideoFlow({
+        scriptId: script.id,
+        imageUrls: imagesData.image_urls,
+        scripts: imagesData.scripts,
+      })
+      setVideoUrl(videoResponse.url)
+      setStep('videoGenerated')
+    } catch (err: any) {
+      setError('Failed to generate video')
+      setStep('images')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Handler: Reset lại flow để tạo video mới.
+  const handleReset = () => {
+    setTitle('')
+    setSelectedContentStyle('default')
+    setSelectedLanguage('en')
+    setLocalContent('')
+    setImagesData(null)
+    setVideoUrl(null)
+    setStep('script')
+    resetScriptState()
+  }
+
+  // Handler: Preview audio (cũng giữ lại như cũ)
   const handlePreviewAudio = async () => {
     setLoading(true)
     setError(null)
@@ -134,38 +218,6 @@ export default function GenerateVideoFlowPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  // Handler: Call API flow to generate video.
-  const handleGenerateVideo = async () => {
-    if (!script) return
-    // Update script if content has been edited.
-    if (localContent !== script.content) {
-      await handleUpdateScript()
-    }
-    setLoading(true)
-    setStep('generating')
-    try {
-      const videoResponse = await generateVideoFlow({ scriptId: script.id })
-      setVideoUrl(videoResponse.url)
-      setStep('generated')
-    } catch (err: any) {
-      setError('Failed to generate video')
-      setStep('editing')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Handler: Reset flow for a new generation.
-  const handleReset = () => {
-    setTitle('')
-    setSelectedContentStyle('default')
-    setLocalContent('')
-    setVideoUrl(null)
-    setPreviewAudioUrl(null)
-    setStep('initial')
-    resetScriptState()
   }
 
   return (
@@ -186,7 +238,7 @@ export default function GenerateVideoFlowPage() {
         </Box>
       )}
 
-      {step === 'initial' && (
+      {step === 'script' && (
         <Box display="flex" flexDirection="column" gap={2}>
           <TextField
             label="Title"
@@ -228,97 +280,65 @@ export default function GenerateVideoFlowPage() {
           <Button variant="contained" onClick={handleCreateScript}>
             Generate Script
           </Button>
+          {script && (
+            <>
+              <Typography variant="subtitle1">
+                Script Content (Editable):
+              </Typography>
+              <TextField
+                label="Script Content"
+                variant="outlined"
+                fullWidth
+                multiline
+                minRows={6}
+                value={localContent}
+                onChange={(e) => setLocalContent(e.target.value)}
+              />
+              <Box display="flex" gap={2}>
+                <Button variant="outlined" onClick={handleUpdateScript}>
+                  Update Script
+                </Button>
+                <Button variant="contained" onClick={handleProceedToImages}>
+                  Proceed to Image Generation
+                </Button>
+              </Box>
+            </>
+          )}
         </Box>
       )}
 
-      {step === 'editing' && script && (
+      {step === 'images' && imagesData && (
         <Box display="flex" flexDirection="column" gap={2}>
-          <Typography variant="h6">Edit Script Content</Typography>
-          <TextField
-            label="Script Content"
-            variant="outlined"
-            fullWidth
-            multiline
-            minRows={6}
-            value={localContent}
-            onChange={(e) => setLocalContent(e.target.value)}
-          />
-
-          {/* Audio Configuration Section */}
-          <Typography variant="h6">Audio Configuration</Typography>
-          <Box display="flex" flexDirection="column" gap={2}>
-            <FormControl fullWidth>
-              <InputLabel id="audio-speed-label">Audio Speed</InputLabel>
-              <Select
-                labelId="audio-speed-label"
-                label="Audio Speed"
-                value={audioSpeed}
-                onChange={(e) => setAudioSpeed(Number(e.target.value))}
-              >
-                {audioSpeedOptions.map((speed) => (
-                  <MenuItem key={speed} value={speed}>
-                    {speed}x
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <FormControl fullWidth>
-              <InputLabel id="audio-voice-label">Audio Voice</InputLabel>
-              <Select
-                labelId="audio-voice-label"
-                label="Audio Voice"
-                value={audioVoice}
-                onChange={(e) => setAudioVoice(e.target.value)}
-              >
-                {audioVoiceOptions.map((voice) => (
-                  <MenuItem key={voice} value={voice}>
-                    {voice}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <FormControl fullWidth>
-              <InputLabel id="audio-instructions-label">
-                Audio Instructions
-              </InputLabel>
-              <Select
-                labelId="audio-instructions-label"
-                label="Audio Instructions"
-                value={audioInstructions}
-                onChange={(e) => setAudioInstructions(e.target.value)}
-              >
-                {audioInstructionsOptions.map((instr) => (
-                  <MenuItem key={instr} value={instr}>
-                    {instr}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <Button variant="outlined" onClick={handlePreviewAudio}>
-              Preview Audio
-            </Button>
-
-            {previewAudioUrl && (
-              <Box>
-                <Typography variant="body2">Audio Preview:</Typography>
-                <audio controls src={previewAudioUrl} />
-              </Box>
-            )}
-          </Box>
-
+          <Typography variant="h6">
+            Generated Images & Corresponding Scripts
+          </Typography>
+          <Grid container spacing={2}>
+            {imagesData.image_urls.map((imgUrl, index) => (
+              <Grid key={index} size={{ xs: 12, sm: 4 }}>
+                <Box display="flex" flexDirection="column" gap={1}>
+                  <img
+                    src={imgUrl}
+                    alt={`Generated ${index + 1}`}
+                    style={{ width: '100%', height: 'auto' }}
+                  />
+                  <TextField
+                    label={`Script for Image ${index + 1}`}
+                    variant="outlined"
+                    fullWidth
+                    multiline
+                    minRows={3}
+                    value={imagesData.scripts[index]}
+                    onChange={(e) =>
+                      handleEditImageScript(index, e.target.value)
+                    }
+                  />
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
           <Box display="flex" gap={2}>
-            <Button variant="outlined" onClick={handleUpdateScript}>
-              Update Script
-            </Button>
-            <Button
-              variant="outlined"
-              color="error"
-              onClick={handleDeleteScript}
-            >
-              Delete Script
+            <Button variant="outlined" onClick={handleRegenerateImages}>
+              Regenerate Images
             </Button>
             <Button variant="contained" onClick={handleGenerateVideo}>
               Generate Video
@@ -327,7 +347,7 @@ export default function GenerateVideoFlowPage() {
         </Box>
       )}
 
-      {step === 'generated' && videoUrl && (
+      {step === 'videoGenerated' && videoUrl && (
         <Box display="flex" flexDirection="column" gap={2} alignItems="center">
           <Typography variant="h6">Video Generated</Typography>
           <video controls width="600" src={videoUrl} />
@@ -336,6 +356,69 @@ export default function GenerateVideoFlowPage() {
           </Button>
         </Box>
       )}
+
+      {/* Phần Audio Configuration để Preview Audio (giữ lại chức năng cũ, có thể dùng trong bước script nếu cần) */}
+      <Box mt={4}>
+        <Typography variant="subtitle1">Audio Preview Configuration</Typography>
+        <Box display="flex" flexDirection="column" gap={2}>
+          <FormControl fullWidth>
+            <InputLabel id="audio-speed-label">Audio Speed</InputLabel>
+            <Select
+              labelId="audio-speed-label"
+              label="Audio Speed"
+              value={audioSpeed}
+              onChange={(e) => setAudioSpeed(Number(e.target.value))}
+            >
+              {audioSpeedOptions.map((speed) => (
+                <MenuItem key={speed} value={speed}>
+                  {speed}x
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth>
+            <InputLabel id="audio-voice-label">Audio Voice</InputLabel>
+            <Select
+              labelId="audio-voice-label"
+              label="Audio Voice"
+              value={audioVoice}
+              onChange={(e) => setAudioVoice(e.target.value)}
+            >
+              {audioVoiceOptions.map((voice) => (
+                <MenuItem key={voice} value={voice}>
+                  {voice}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth>
+            <InputLabel id="audio-instructions-label">
+              Audio Instructions
+            </InputLabel>
+            <Select
+              labelId="audio-instructions-label"
+              label="Audio Instructions"
+              value={audioInstructions}
+              onChange={(e) => setAudioInstructions(e.target.value)}
+            >
+              {audioInstructionsOptions.map((instr) => (
+                <MenuItem key={instr} value={instr}>
+                  {instr}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Button variant="outlined" onClick={handlePreviewAudio}>
+            Preview Audio
+          </Button>
+          {previewAudioUrl && (
+            <Box>
+              <Typography variant="body2">Audio Preview:</Typography>
+              <audio controls src={previewAudioUrl} />
+            </Box>
+          )}
+        </Box>
+      </Box>
     </Container>
   )
 }
