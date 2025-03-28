@@ -13,21 +13,19 @@ export interface ImagesScripts {
   scripts: string[]
 }
 
-// Mocked preview audio function – simulates generating a sample audio preview based on configuration.
-export const previewAudio = async (
-  config: AudioConfig
-): Promise<{ url: string }> => {
-  // Simulate a delay and return a mocked audio preview URL
-  return new Promise((resolve) => {
-    setTimeout(
-      () =>
-        resolve({
-          url: 'https://vision-forge.sgp1.cdn.digitaloceanspaces.com/audio/ffbca4e3617249949181fd96eb5c6a02.mp3',
-        }),
-      1000
-    )
-  })
+export interface AudioPreview {
+  id: string
+  description: string
+  url: string
 }
+
+// Fetch available voice options for audio preview
+export const getPreviewVoices = async (): Promise<AudioPreview[]> => {
+  const response = await api.get('/flow/preview-voices')
+  return response.data.voices || []
+}
+
+// previewAudio function is removed since we're using AudioPreview URLs directly
 
 export const generateImages = async (data: {
   content: string

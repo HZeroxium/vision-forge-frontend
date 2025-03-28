@@ -8,14 +8,14 @@ interface ImagesStepProps {
   imagesData: { image_urls: string[]; scripts: string[] }
   onEditImageScript: (index: number, newScript: string) => void
   onRegenerateImages: () => Promise<void>
-  onGenerateVideo: () => Promise<void>
+  onProceedToAudio: () => void
 }
 
 const ImagesStep: React.FC<ImagesStepProps> = ({
   imagesData,
   onEditImageScript,
   onRegenerateImages,
-  onGenerateVideo,
+  onProceedToAudio,
 }) => {
   return (
     <Box display="flex" flexDirection="column" gap={2}>
@@ -48,8 +48,8 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
         <Button variant="outlined" onClick={onRegenerateImages}>
           Regenerate Images
         </Button>
-        <Button variant="contained" onClick={onGenerateVideo}>
-          Generate Video
+        <Button variant="contained" onClick={onProceedToAudio}>
+          Proceed to Audio Configuration
         </Button>
       </Box>
     </Box>
