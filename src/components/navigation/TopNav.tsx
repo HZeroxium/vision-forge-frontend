@@ -13,24 +13,48 @@ import {
   MenuItem,
   Typography,
   Toolbar,
+  CircularProgress,
 } from '@mui/material'
-import { useAppSelector } from '@store/store'
+import { useAppSelector, useAppDispatch } from '@store/store'
 import { useRouter } from 'next/navigation'
+import { fetchUserProfile } from '@store/authSlice' // You'll need to import your fetch user action
 
 function TopNav() {
   // Always call hooks at the top level in the same order
   const [mounted, setMounted] = useState(false)
+  const [authChecking, setAuthChecking] = useState(true)
   const { user } = useAppSelector((state) => state.auth)
   const router = useRouter()
+  const dispatch = useAppDispatch()
 
   // IMPORTANT: Always call useTranslation unconditionally
   const { t, i18n } = useTranslation('auth')
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
 
+  // Improve authentication check to handle edge cases
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token')
+
+      if (token) {
+        if (!user) {
+          try {
+            // Dispatch an action to fetch user data using the stored token
+            await dispatch(fetchUserProfile())
+          } catch (error) {
+            console.error('Error loading user profile:', error)
+            // The fetchUserProfile thunk will handle token removal on failure
+          }
+        }
+      }
+
+      setAuthChecking(false)
+      setMounted(true)
+    }
+
+    checkAuth()
+  }, [dispatch, user])
 
   const handleLangMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
@@ -74,7 +98,10 @@ function TopNav() {
           </Typography>
         </Link>
         <div className="flex items-center gap-4">
-          {user ? (
+          {authChecking ? (
+            // Show loading indicator while checking authentication
+            <CircularProgress size={24} />
+          ) : user ? (
             <>
               <Typography variant="body1">{content.welcome}</Typography>
               <IconButton onClick={handleProfileClick} color="inherit">

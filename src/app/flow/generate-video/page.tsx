@@ -11,7 +11,7 @@ import { useScripts } from '@hooks/useScripts'
 import {
   generateImages,
   generateVideoFlow,
-  getPreviewVoices,
+  getPreviewVoiceUrl,
   AudioPreview,
 } from '@services/flowService'
 
@@ -43,10 +43,19 @@ export default function GenerateVideoFlowPage() {
 
   // State for Step 3 – Audio Configuration
   const [previewAudioUrl, setPreviewAudioUrl] = useState<string | null>(null)
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false)
   const [audioSpeed, setAudioSpeed] = useState(1)
-  const [audioVoice, setAudioVoice] = useState('')
+  const [audioVoice, setAudioVoice] = useState('alloy') // Default to 'alloy'
   const [audioInstructions, setAudioInstructions] = useState('Clear')
-  const [availableVoices, setAvailableVoices] = useState<AudioPreview[]>([])
+
+  // Hardcoded voice data based on backend information
+  const availableVoices: AudioPreview[] = [
+    { id: 'alloy', description: 'Neutral, balanced voice' },
+    { id: 'ash', description: 'Deep, resonant voice' },
+    { id: 'echo', description: 'Soft, gentle voice' },
+    { id: 'sage', description: 'Warm, friendly voice' },
+    { id: 'verse', description: 'Strong, authoritative voice' },
+  ]
 
   // State for Step 4 – Video Generation/Preview
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
@@ -71,30 +80,30 @@ export default function GenerateVideoFlowPage() {
   const audioSpeedOptions = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4]
   const audioInstructionsOptions = ['Clear', 'Dramatic', 'Calm', 'Energetic']
 
-  // Fetch available voices when component mounts
+  // Load preview for default voice when component mounts
   useEffect(() => {
-    const fetchVoices = async () => {
-      try {
-        const voices = await getPreviewVoices()
-        // Ensure voices is an array
-        if (Array.isArray(voices)) {
-          setAvailableVoices(voices)
-          if (voices.length > 0) {
-            setAudioVoice(voices[0].id)
-          }
-        } else {
-          console.error('Expected voices to be an array but got:', voices)
-          setAvailableVoices([])
-        }
-      } catch (err) {
-        console.error('Error fetching voices:', err)
-        setError('Failed to fetch voice options')
-        setAvailableVoices([])
-      }
+    if (audioVoice) {
+      handleVoiceChange(audioVoice)
     }
-
-    fetchVoices()
   }, [])
+
+  // Fetch audio preview when voice changes
+  const handleVoiceChange = async (voiceId: string) => {
+    if (!voiceId) return
+
+    setIsLoadingPreview(true)
+    setPreviewAudioUrl(null)
+
+    try {
+      const url = await getPreviewVoiceUrl(voiceId)
+      setPreviewAudioUrl(url)
+    } catch (err) {
+      console.error('Error fetching voice preview:', err)
+      setError('Failed to fetch voice preview')
+    } finally {
+      setIsLoadingPreview(false)
+    }
+  }
 
   // --- STEP 1: Script Creation & Editing Handlers ---
   const handleCreateScript = async () => {
@@ -188,12 +197,14 @@ export default function GenerateVideoFlowPage() {
     setStep('videoGenerating')
     // Start video generation and show spinner immediately.
     if (!script || !imagesData) return
-    if (localContent !== script.content) {
-      await handleUpdateScript()
-    }
+
     setLoading(true)
     setError(null)
+
     try {
+      // The backend expects the scripts from ImagesStep - these already contain user edits
+      // We don't need to call handleUpdateScript for the original content here
+      // as the backend will automatically update the script if needed
       const videoResponse = await generateVideoFlow({
         scriptId: script.id,
         imageUrls: imagesData.image_urls,
@@ -218,6 +229,7 @@ export default function GenerateVideoFlowPage() {
     setImagesData(null)
     setVideoUrl(null)
     setPreviewAudioUrl(null)
+    setAudioVoice('alloy') // Reset to default voice
     setStep('script')
     resetScriptState()
   }
@@ -276,12 +288,13 @@ export default function GenerateVideoFlowPage() {
           setAudioVoice={setAudioVoice}
           audioInstructions={audioInstructions}
           setAudioInstructions={setAudioInstructions}
-          availableVoices={
-            Array.isArray(availableVoices) ? availableVoices : []
-          }
+          availableVoices={availableVoices}
           onProceedToVideo={handleProceedToVideo}
           audioSpeedOptions={audioSpeedOptions}
           audioInstructionsOptions={audioInstructionsOptions}
+          previewAudioUrl={previewAudioUrl}
+          isLoadingPreview={isLoadingPreview}
+          onVoiceChange={handleVoiceChange}
         />
       )}
 

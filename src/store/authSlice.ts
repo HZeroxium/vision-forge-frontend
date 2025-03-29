@@ -33,6 +33,8 @@ export const loginAsync = createAsyncThunk(
       localStorage.setItem('token', loginResponse.access_token)
       // Load user profile after login
       const user = await authService.getProfile()
+      // Also save user data in localStorage for persistence
+      localStorage.setItem('user', JSON.stringify(user))
       return { token: loginResponse.access_token, user }
     } catch (error: any) {
       return rejectWithValue(
@@ -135,6 +137,38 @@ export const forgotPasswordAsync = createAsyncThunk(
   }
 )
 
+// Async thunk for fetching user profile
+export const fetchUserProfile = createAsyncThunk(
+  'auth/fetchUserProfile',
+  async (_, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        return rejectWithValue('No authentication token found')
+      }
+
+      // First try to get the user from localStorage
+      const storedUser = authService.getCurrentUser()
+      if (storedUser) {
+        return storedUser
+      }
+
+      // If no stored user, fetch from API
+      const user = await authService.getProfile()
+      // Save user to localStorage
+      localStorage.setItem('user', JSON.stringify(user))
+      return user
+    } catch (error: any) {
+      // Clear invalid authentication data
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      return rejectWithValue(
+        error.response?.data?.message || 'Failed to fetch user profile'
+      )
+    }
+  }
+)
+
 // Create authSlice using createSlice API from Redux Toolkit
 const authSlice = createSlice({
   name: 'auth',
@@ -145,6 +179,7 @@ const authSlice = createSlice({
       state.user = null
       state.token = null
       localStorage.removeItem('token')
+      localStorage.removeItem('user')
     },
     // Action to clear error messages
     clearError(state) {
@@ -237,6 +272,20 @@ const authSlice = createSlice({
       .addCase(forgotPasswordAsync.rejected, (state, action) => {
         state.loading = false
         state.error = (action.payload as string) || 'Forgot password failed'
+      })
+      // Handle fetchUserProfile actions
+      .addCase(fetchUserProfile.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(fetchUserProfile.fulfilled, (state, action) => {
+        state.user = action.payload
+        state.loading = false
+      })
+      .addCase(fetchUserProfile.rejected, (state, action) => {
+        state.user = null
+        state.loading = false
+        state.error = action.payload as string
       })
   },
 })

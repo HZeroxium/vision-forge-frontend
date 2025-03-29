@@ -16,16 +16,13 @@ export interface ImagesScripts {
 export interface AudioPreview {
   id: string
   description: string
-  url: string
 }
 
-// Fetch available voice options for audio preview
-export const getPreviewVoices = async (): Promise<AudioPreview[]> => {
-  const response = await api.get('/flow/preview-voices')
-  return response.data.voices || []
+// Fetch preview URL for a specific voice
+export const getPreviewVoiceUrl = async (voiceId: string): Promise<string> => {
+  const response = await api.get(`/flow/preview-voice?voice_id=${voiceId}`)
+  return response.data.url
 }
-
-// previewAudio function is removed since we're using AudioPreview URLs directly
 
 export const generateImages = async (data: {
   content: string

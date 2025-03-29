@@ -63,3 +63,18 @@ export const getProfile = async (): Promise<User> => {
   const response = await api.get('/auth/profile')
   return response.data
 }
+
+export function getCurrentUser(): User | null {
+  const userJson = localStorage.getItem('user')
+  if (userJson) {
+    try {
+      return JSON.parse(userJson)
+    } catch (error) {
+      console.error('Error parsing user data from localStorage', error)
+      // Clear invalid data
+      localStorage.removeItem('user')
+      return null
+    }
+  }
+  return null
+}

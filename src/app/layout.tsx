@@ -6,6 +6,8 @@ import React from 'react'
 import Providers from '@components/providers/Providers'
 import { NextI18nextProvider } from '@/components/providers/NextI18nextProvider'
 import TopNav from '@/components/navigation/TopNav'
+import { Toaster } from 'react-hot-toast'
+
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
@@ -37,6 +39,7 @@ export default function RootLayout({
             {children}
           </Providers>
         </NextI18nextProvider>
+        <Toaster position="top-right" />
       </body>
     </html>
   )

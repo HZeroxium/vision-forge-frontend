@@ -1,6 +1,6 @@
 // src/components/flow/AudioPreviewConfig.tsx
 'use client'
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Box,
   Typography,
@@ -9,8 +9,13 @@ import {
   Select,
   MenuItem,
   Button,
+  CircularProgress,
+  SelectChangeEvent,
+  Stack,
 } from '@mui/material'
 import { AudioPreview } from '@services/flowService'
+import PlayArrowIcon from '@mui/icons-material/PlayArrow'
+import CloseIcon from '@mui/icons-material/Close'
 
 interface AudioPreviewConfigProps {
   audioSpeed: number
@@ -23,6 +28,9 @@ interface AudioPreviewConfigProps {
   onProceedToVideo: () => void
   audioSpeedOptions: number[]
   audioInstructionsOptions: string[]
+  previewAudioUrl: string | null
+  isLoadingPreview: boolean
+  onVoiceChange: (voiceId: string) => void
 }
 
 const AudioPreviewConfig: React.FC<AudioPreviewConfigProps> = ({
@@ -36,10 +44,25 @@ const AudioPreviewConfig: React.FC<AudioPreviewConfigProps> = ({
   onProceedToVideo,
   audioSpeedOptions,
   audioInstructionsOptions,
+  previewAudioUrl,
+  isLoadingPreview,
+  onVoiceChange,
 }) => {
-  // Find the selected voice to get its URL
-  const selectedVoice = availableVoices.find((voice) => voice.id === audioVoice)
-  const previewAudioUrl = selectedVoice?.url || null
+  // State to control whether to show the audio preview player
+  const [showPreview, setShowPreview] = useState(false)
+
+  const handleVoiceChange = (e: SelectChangeEvent<string>) => {
+    const voiceId = e.target.value
+    setAudioVoice(voiceId)
+    onVoiceChange(voiceId)
+    // Hide audio preview when voice changes
+    setShowPreview(false)
+  }
+
+  // Toggle audio preview display
+  const togglePreview = () => {
+    setShowPreview((prev) => !prev)
+  }
 
   return (
     <Box display="flex" flexDirection="column" gap={2} mt={4}>
@@ -65,11 +88,11 @@ const AudioPreviewConfig: React.FC<AudioPreviewConfigProps> = ({
           labelId="audio-voice-label"
           label="Audio Voice"
           value={audioVoice}
-          onChange={(e) => setAudioVoice(e.target.value)}
+          onChange={handleVoiceChange}
         >
           {availableVoices.map((voice) => (
             <MenuItem key={voice.id} value={voice.id}>
-              {voice.id}
+              {voice.id} - {voice.description}
             </MenuItem>
           ))}
         </Select>
@@ -92,14 +115,56 @@ const AudioPreviewConfig: React.FC<AudioPreviewConfigProps> = ({
         </Select>
       </FormControl>
 
-      {previewAudioUrl && (
-        <Box>
-          <Typography variant="body2">Audio Preview:</Typography>
-          <audio controls src={previewAudioUrl} />
-        </Box>
-      )}
+      <Box>
+        <Typography variant="body2" gutterBottom>
+          Audio Preview:
+        </Typography>
 
-      <Button variant="contained" onClick={onProceedToVideo}>
+        {isLoadingPreview ? (
+          <Box display="flex" justifyContent="center" my={2}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : previewAudioUrl ? (
+          <Box>
+            {!showPreview ? (
+              <Button
+                variant="outlined"
+                startIcon={<PlayArrowIcon />}
+                onClick={togglePreview}
+                sx={{ mt: 1 }}
+              >
+                Play Voice Preview
+              </Button>
+            ) : (
+              <Box sx={{ mt: 2 }}>
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  alignItems="center"
+                  sx={{ mb: 1 }}
+                >
+                  <audio controls src={previewAudioUrl} autoPlay />
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="secondary"
+                    onClick={togglePreview}
+                    startIcon={<CloseIcon />}
+                  >
+                    Close
+                  </Button>
+                </Stack>
+              </Box>
+            )}
+          </Box>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            Select a voice to enable preview
+          </Typography>
+        )}
+      </Box>
+
+      <Button variant="contained" onClick={onProceedToVideo} sx={{ mt: 2 }}>
         Proceed to Video Generation
       </Button>
     </Box>
