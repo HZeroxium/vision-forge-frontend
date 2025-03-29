@@ -164,9 +164,9 @@ const AudioPreviewConfig: React.FC<AudioPreviewConfigProps> = ({
         )}
       </Box>
 
-      <Button variant="contained" onClick={onProceedToVideo} sx={{ mt: 2 }}>
+      {/* <Button variant="contained" onClick={onProceedToVideo} sx={{ mt: 2 }}>
         Proceed to Video Generation
-      </Button>
+      </Button> */}
     </Box>
   )
 }

@@ -1,6 +1,6 @@
 // src/components/flow/ScriptStep.tsx
 'use client'
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Box,
   TextField,
@@ -10,7 +10,10 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Snackbar,
+  Alert,
 } from '@mui/material'
+import RestartAltIcon from '@mui/icons-material/RestartAlt'
 
 interface ScriptStepProps {
   title: string
@@ -27,6 +30,7 @@ interface ScriptStepProps {
   onProceedToImages: () => Promise<void>
   contentStyleOptions: string[]
   languageOptions: { value: string; label: string }[]
+  onReset: () => void
 }
 
 const ScriptStep: React.FC<ScriptStepProps> = ({
@@ -44,7 +48,10 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
   onProceedToImages,
   contentStyleOptions,
   languageOptions,
+  onReset,
 }) => {
+  const [showNoScriptAlert, setShowNoScriptAlert] = useState(false)
+
   return (
     <Box display="flex" flexDirection="column" gap={2}>
       <TextField
@@ -84,9 +91,21 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
           ))}
         </Select>
       </FormControl>
-      <Button variant="contained" onClick={onCreateScript}>
-        Generate Script
-      </Button>
+
+      <Box display="flex" gap={2}>
+        <Button variant="contained" onClick={onCreateScript} fullWidth>
+          Generate Script
+        </Button>
+        <Button
+          variant="outlined"
+          color="secondary"
+          startIcon={<RestartAltIcon />}
+          onClick={onReset}
+        >
+          Reset Flow
+        </Button>
+      </Box>
+
       {scriptExists && (
         <>
           <Typography variant="subtitle1">
@@ -105,12 +124,20 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
             <Button variant="outlined" onClick={onUpdateScript}>
               Update Script
             </Button>
-            <Button variant="contained" onClick={onProceedToImages}>
-              Proceed to Image Generation
-            </Button>
           </Box>
         </>
       )}
+
+      <Snackbar
+        open={showNoScriptAlert}
+        autoHideDuration={4000}
+        onClose={() => setShowNoScriptAlert(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="info" onClose={() => setShowNoScriptAlert(false)}>
+          You need to generate a script before proceeding to the next step.
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }

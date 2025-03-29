@@ -1,12 +1,20 @@
 // src/app/flow/generate-video/page.tsx
 'use client'
 import React, { useState, useEffect } from 'react'
-import { Container, Typography, CircularProgress, Box } from '@mui/material'
-import Grid from '@mui/material/Grid2'
+import {
+  Container,
+  Typography,
+  CircularProgress,
+  Box,
+  Paper,
+} from '@mui/material'
 import ScriptStep from '@components/flow/ScriptStep'
 import ImagesStep from '@components/flow/ImagesStep'
 import AudioPreviewConfig from '@components/flow/AudioPreviewConfig'
 import VideoPreviewStep from '@components/flow/VideoPreviewStep'
+import ProgressTracker from '@components/flow/ProgressTracker'
+import StepNavigation from '@components/flow/StepNavigation'
+import PageTransition from '@components/flow/PageTransition'
 import { useScripts } from '@hooks/useScripts'
 import {
   generateImages,
@@ -28,6 +36,10 @@ type Step = 'script' | 'images' | 'audio' | 'videoGenerating' | 'videoGenerated'
 export default function GenerateVideoFlowPage() {
   // Step management state
   const [step, setStep] = useState<Step>('script')
+  const [previousStep, setPreviousStep] = useState<Step | null>(null)
+  const [transitionDirection, setTransitionDirection] = useState<
+    'right' | 'left'
+  >('right')
 
   // State for Step 1 – Script Creation & Editing
   const [title, setTitle] = useState('')
@@ -79,6 +91,25 @@ export default function GenerateVideoFlowPage() {
   ]
   const audioSpeedOptions = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4]
   const audioInstructionsOptions = ['Clear', 'Dramatic', 'Calm', 'Energetic']
+
+  // Helper function to change steps with proper transition direction
+  const navigateToStep = (newStep: Step) => {
+    setPreviousStep(step)
+
+    // Set transition direction based on step progression
+    const stepOrder: Step[] = [
+      'script',
+      'images',
+      'audio',
+      'videoGenerating',
+      'videoGenerated',
+    ]
+    const currentIndex = stepOrder.indexOf(step)
+    const newIndex = stepOrder.indexOf(newStep)
+
+    setTransitionDirection(newIndex > currentIndex ? 'right' : 'left')
+    setStep(newStep)
+  }
 
   // Load preview for default voice when component mounts
   useEffect(() => {
@@ -145,20 +176,28 @@ export default function GenerateVideoFlowPage() {
     if (localContent !== script?.content) {
       await handleUpdateScript()
     }
-    setLoading(true)
-    setError(null)
-    try {
-      const imagesResponse = await generateImages({
-        content: localContent,
-        style: selectedContentStyle,
-      })
-      setImagesData(imagesResponse)
-      setStep('images')
-    } catch (err: any) {
-      setError('Failed to generate images')
-    } finally {
-      setLoading(false)
+
+    // Only generate images if they don't exist already
+    if (!imagesData) {
+      setLoading(true)
+      setError(null)
+      try {
+        const imagesResponse = await generateImages({
+          content: localContent,
+          style: selectedContentStyle,
+        })
+        setImagesData(imagesResponse)
+      } catch (err: any) {
+        setError('Failed to generate images')
+        setLoading(false)
+        return // Don't proceed if image generation fails
+      } finally {
+        setLoading(false)
+      }
     }
+
+    // Navigate to images step after ensuring we have images
+    navigateToStep('images')
   }
 
   // --- STEP 2: Images & Scripts Editing Handlers ---
@@ -187,14 +226,28 @@ export default function GenerateVideoFlowPage() {
     }
   }
 
-  // Proceed from Images step to Audio step.
-  const handleProceedToAudio = () => {
-    setStep('audio')
+  // --- STEP NAVIGATION HANDLERS ---
+  const handleNextStep = () => {
+    if (step === 'script' && script) {
+      handleProceedToImages()
+    } else if (step === 'images') {
+      navigateToStep('audio')
+    } else if (step === 'audio') {
+      handleProceedToVideo()
+    }
+  }
+
+  const handlePreviousStep = () => {
+    if (step === 'images') {
+      navigateToStep('script')
+    } else if (step === 'audio') {
+      navigateToStep('images')
+    }
   }
 
   // --- STEP 3: Audio Configuration Handlers ---
   const handleProceedToVideo = async () => {
-    setStep('videoGenerating')
+    navigateToStep('videoGenerating')
     // Start video generation and show spinner immediately.
     if (!script || !imagesData) return
 
@@ -203,18 +256,16 @@ export default function GenerateVideoFlowPage() {
 
     try {
       // The backend expects the scripts from ImagesStep - these already contain user edits
-      // We don't need to call handleUpdateScript for the original content here
-      // as the backend will automatically update the script if needed
       const videoResponse = await generateVideoFlow({
         scriptId: script.id,
         imageUrls: imagesData.image_urls,
         scripts: imagesData.scripts,
       })
       setVideoUrl(videoResponse.url)
-      setStep('videoGenerated')
+      navigateToStep('videoGenerated')
     } catch (err: any) {
       setError('Failed to generate video')
-      setStep('audio') // go back to audio step if video generation fails
+      navigateToStep('audio') // go back to audio step if video generation fails
     } finally {
       setLoading(false)
     }
@@ -230,18 +281,28 @@ export default function GenerateVideoFlowPage() {
     setVideoUrl(null)
     setPreviewAudioUrl(null)
     setAudioVoice('alloy') // Reset to default voice
-    setStep('script')
+    navigateToStep('script')
     resetScriptState()
   }
 
+  // Determine if Next button should be disabled
+  const isNextDisabled = () => {
+    if (step === 'script') {
+      return !script // Disable if no script exists
+    }
+    return false
+  }
+
   return (
-    <Container maxWidth="md" sx={{ mt: 4 }}>
+    <Container maxWidth="md" sx={{ mt: 4, pb: 4 }}>
       <Typography variant="h4" gutterBottom>
         Generate Video Flow
       </Typography>
 
+      <ProgressTracker currentStep={step} />
+
       {error && (
-        <Typography color="error" variant="body1">
+        <Typography color="error" variant="body1" sx={{ mb: 2 }}>
           {error}
         </Typography>
       )}
@@ -252,61 +313,108 @@ export default function GenerateVideoFlowPage() {
         </Box>
       )}
 
-      {step === 'script' && (
-        <ScriptStep
-          title={title}
-          setTitle={setTitle}
-          selectedContentStyle={selectedContentStyle}
-          setSelectedContentStyle={setSelectedContentStyle}
-          selectedLanguage={selectedLanguage}
-          setSelectedLanguage={setSelectedLanguage}
-          localContent={localContent}
-          setLocalContent={setLocalContent}
-          scriptExists={!!script}
-          onCreateScript={handleCreateScript}
-          onUpdateScript={handleUpdateScript}
-          onProceedToImages={handleProceedToImages}
-          contentStyleOptions={contentStyleOptions}
-          languageOptions={languageOptions}
-        />
-      )}
+      <Paper
+        elevation={3}
+        sx={{
+          p: 3,
+          position: 'relative',
+          overflow: 'hidden',
+          minHeight: '400px',
+        }}
+      >
+        <PageTransition
+          isVisible={step === 'script'}
+          direction={transitionDirection}
+        >
+          <ScriptStep
+            title={title}
+            setTitle={setTitle}
+            selectedContentStyle={selectedContentStyle}
+            setSelectedContentStyle={setSelectedContentStyle}
+            selectedLanguage={selectedLanguage}
+            setSelectedLanguage={setSelectedLanguage}
+            localContent={localContent}
+            setLocalContent={setLocalContent}
+            scriptExists={!!script}
+            onCreateScript={handleCreateScript}
+            onUpdateScript={handleUpdateScript}
+            onProceedToImages={handleProceedToImages}
+            contentStyleOptions={contentStyleOptions}
+            languageOptions={languageOptions}
+            onReset={handleReset}
+          />
+        </PageTransition>
 
-      {step === 'images' && imagesData && (
-        <ImagesStep
-          imagesData={imagesData}
-          onEditImageScript={handleEditImageScript}
-          onRegenerateImages={handleRegenerateImages}
-          onProceedToAudio={handleProceedToAudio}
-        />
-      )}
+        <PageTransition
+          isVisible={step === 'images'}
+          direction={transitionDirection}
+        >
+          {imagesData && (
+            <ImagesStep
+              imagesData={imagesData}
+              onEditImageScript={handleEditImageScript}
+              onRegenerateImages={handleRegenerateImages}
+              onProceedToAudio={() => navigateToStep('audio')}
+            />
+          )}
+        </PageTransition>
 
-      {step === 'audio' && (
-        <AudioPreviewConfig
-          audioSpeed={audioSpeed}
-          setAudioSpeed={setAudioSpeed}
-          audioVoice={audioVoice}
-          setAudioVoice={setAudioVoice}
-          audioInstructions={audioInstructions}
-          setAudioInstructions={setAudioInstructions}
-          availableVoices={availableVoices}
-          onProceedToVideo={handleProceedToVideo}
-          audioSpeedOptions={audioSpeedOptions}
-          audioInstructionsOptions={audioInstructionsOptions}
-          previewAudioUrl={previewAudioUrl}
-          isLoadingPreview={isLoadingPreview}
-          onVoiceChange={handleVoiceChange}
-        />
-      )}
+        <PageTransition
+          isVisible={step === 'audio'}
+          direction={transitionDirection}
+        >
+          <AudioPreviewConfig
+            audioSpeed={audioSpeed}
+            setAudioSpeed={setAudioSpeed}
+            audioVoice={audioVoice}
+            setAudioVoice={setAudioVoice}
+            audioInstructions={audioInstructions}
+            setAudioInstructions={setAudioInstructions}
+            availableVoices={availableVoices}
+            onProceedToVideo={handleProceedToVideo}
+            audioSpeedOptions={audioSpeedOptions}
+            audioInstructionsOptions={audioInstructionsOptions}
+            previewAudioUrl={previewAudioUrl}
+            isLoadingPreview={isLoadingPreview}
+            onVoiceChange={handleVoiceChange}
+          />
+        </PageTransition>
 
-      {step === 'videoGenerating' && (
-        <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
-          <Typography variant="h6">Generating video, please wait...</Typography>
-        </Box>
-      )}
+        <PageTransition
+          isVisible={step === 'videoGenerating'}
+          direction={transitionDirection}
+        >
+          <Box
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            gap={2}
+            py={8}
+          >
+            <Typography variant="h6">
+              Generating video, please wait...
+            </Typography>
+            <CircularProgress size={60} />
+          </Box>
+        </PageTransition>
 
-      {step === 'videoGenerated' && videoUrl && (
-        <VideoPreviewStep videoUrl={videoUrl} onReset={handleReset} />
-      )}
+        <PageTransition
+          isVisible={step === 'videoGenerated'}
+          direction={transitionDirection}
+        >
+          {videoUrl && (
+            <VideoPreviewStep videoUrl={videoUrl} onReset={handleReset} />
+          )}
+        </PageTransition>
+      </Paper>
+
+      <StepNavigation
+        currentStep={step}
+        onPrevious={handlePreviousStep}
+        onNext={handleNextStep}
+        disableNext={isNextDisabled()}
+        nextLabel={step === 'audio' ? 'Generate Video' : 'Next Step'}
+      />
     </Container>
   )
 }
