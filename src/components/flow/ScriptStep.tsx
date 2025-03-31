@@ -12,9 +12,9 @@ import {
   MenuItem,
   Snackbar,
   Alert,
-  CircularProgress,
 } from '@mui/material'
 import RestartAltIcon from '@mui/icons-material/RestartAlt'
+import LoadingIndicator from '../common/LoadingIndicator'
 
 interface ScriptStepProps {
   title: string
@@ -124,7 +124,7 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
           disabled={isGeneratingScript}
           startIcon={
             isGeneratingScript ? (
-              <CircularProgress size={20} color="inherit" />
+              <LoadingIndicator isLoading={true} size={20} showAfterDelay={0} />
             ) : null
           }
         >
@@ -143,29 +143,11 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
 
       {isGeneratingScript && (
         <Box display="flex" justifyContent="center" mt={2} mb={2}>
-          <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-            <CircularProgress size={60} />
-            <Box
-              sx={{
-                top: 0,
-                left: 0,
-                bottom: 0,
-                right: 0,
-                position: 'absolute',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Typography
-                variant="caption"
-                component="div"
-                color="text.secondary"
-              >
-                AI
-              </Typography>
-            </Box>
-          </Box>
+          <LoadingIndicator
+            isLoading={true}
+            size={60}
+            message="AI is generating your script..."
+          />
         </Box>
       )}
 
@@ -190,7 +172,11 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
               disabled={isUpdatingScript}
               startIcon={
                 isUpdatingScript ? (
-                  <CircularProgress size={16} color="inherit" />
+                  <LoadingIndicator
+                    isLoading={true}
+                    size={16}
+                    showAfterDelay={0}
+                  />
                 ) : null
               }
             >

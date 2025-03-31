@@ -1,13 +1,7 @@
 // src/app/flow/generate-video/page.tsx
 'use client'
 import React, { useState, useEffect } from 'react'
-import {
-  Container,
-  Typography,
-  CircularProgress,
-  Box,
-  Paper,
-} from '@mui/material'
+import { Container, Typography, Box, Paper } from '@mui/material'
 import ScriptStep from '@components/flow/ScriptStep'
 import ImagesStep from '@components/flow/ImagesStep'
 import AudioPreviewConfig from '@components/flow/AudioPreviewConfig'
@@ -15,6 +9,7 @@ import VideoPreviewStep from '@components/flow/VideoPreviewStep'
 import ProgressTracker from '@components/flow/ProgressTracker'
 import StepNavigation from '@components/flow/StepNavigation'
 import PageTransition from '@components/flow/PageTransition'
+import LoadingIndicator from '@components/common/LoadingIndicator'
 import { useScripts } from '@hooks/useScripts'
 import {
   generateImages,
@@ -347,7 +342,7 @@ export default function GenerateVideoFlowPage() {
 
       {loading && (
         <Box display="flex" justifyContent="center" sx={{ my: 2 }}>
-          <CircularProgress />
+          <LoadingIndicator isLoading={true} size={24} />
         </Box>
       )}
 
@@ -432,7 +427,11 @@ export default function GenerateVideoFlowPage() {
             <Typography variant="h6">
               Generating video, please wait...
             </Typography>
-            <CircularProgress size={60} />
+            <LoadingIndicator
+              isLoading={true}
+              size={60}
+              message="This may take a few minutes"
+            />
           </Box>
         </PageTransition>
 

@@ -16,6 +16,7 @@ import {
 import { AudioPreview } from '@services/flowService'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import CloseIcon from '@mui/icons-material/Close'
+import LoadingIndicator from '../common/LoadingIndicator'
 
 interface AudioPreviewConfigProps {
   audioSpeed: number
@@ -122,7 +123,7 @@ const AudioPreviewConfig: React.FC<AudioPreviewConfigProps> = ({
 
         {isLoadingPreview ? (
           <Box display="flex" justifyContent="center" my={2}>
-            <CircularProgress size={24} />
+            <LoadingIndicator isLoading={true} size={24} />
           </Box>
         ) : previewAudioUrl ? (
           <Box>

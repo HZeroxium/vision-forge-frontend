@@ -30,6 +30,8 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen'
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import NavigateNextIcon from '@mui/icons-material/NavigateNext'
+import LoadingIndicator from '../common/LoadingIndicator'
+import ImageSkeleton from '../common/ImageSkeleton'
 
 interface ImagesStepProps {
   imagesData: { image_urls: string[]; scripts: string[] } | null
@@ -82,13 +84,11 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
         minHeight="400px"
         gap={3}
       >
-        <CircularProgress size={60} />
-        <Typography variant="h6" color="text.secondary">
-          Generating images from your script...
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          This may take a moment. AI is creating visuals based on your content.
-        </Typography>
+        <LoadingIndicator
+          isLoading={true}
+          message="Generating images from your script. This may take a moment."
+          size={60}
+        />
       </Box>
     )
   }
@@ -182,25 +182,10 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
               }}
             >
               {isRegeneratingImages || loadingImages[currentImageIndex] ? (
-                <Box
-                  sx={{
-                    height: isFullscreen ? 500 : 350,
-                    width: isFullscreen ? '100%' : { xs: '100%', md: '60%' },
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: theme.palette.grey[100],
-                  }}
-                >
-                  <Box sx={{ textAlign: 'center' }}>
-                    <CircularProgress size={60} />
-                    <Typography variant="body2" sx={{ mt: 2 }}>
-                      {isRegeneratingImages
-                        ? 'Regenerating image...'
-                        : 'Loading image...'}
-                    </Typography>
-                  </Box>
-                </Box>
+                <ImageSkeleton
+                  height={isFullscreen ? 500 : 350}
+                  width={isFullscreen ? '100%' : { xs: '100%', md: '60%' }}
+                />
               ) : (
                 <CardMedia
                   component="img"
@@ -382,7 +367,7 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
             }}
           >
             {(isRegeneratingImages || loadingImages[index]) && (
-              <CircularProgress size={20} />
+              <LoadingIndicator isLoading={true} size={20} showAfterDelay={0} />
             )}
           </Box>
         ))}
@@ -395,7 +380,11 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
             variant="outlined"
             startIcon={
               isRegeneratingImages ? (
-                <CircularProgress size={20} />
+                <LoadingIndicator
+                  isLoading={true}
+                  size={20}
+                  showAfterDelay={0}
+                />
               ) : (
                 <RefreshIcon />
               )
