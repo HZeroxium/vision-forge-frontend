@@ -378,17 +378,7 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
         <Tooltip title="Generate a new set of images from your script">
           <Button
             variant="outlined"
-            startIcon={
-              isRegeneratingImages ? (
-                <LoadingIndicator
-                  isLoading={true}
-                  size={20}
-                  showAfterDelay={0}
-                />
-              ) : (
-                <RefreshIcon />
-              )
-            }
+            startIcon={<RefreshIcon />}
             onClick={handleRegenerateImagesClick}
             disabled={isRegeneratingImages}
             sx={{
