@@ -18,7 +18,9 @@ export const useScripts = () => {
   // Memoized function to create script
   const createScript = useCallback(
     (data: { title: string; style?: string; language?: string }) => {
-      dispatch(createScriptAsync(data))
+      const action = dispatch(createScriptAsync(data))
+      // Return the promise from the async thunk
+      return action.unwrap()
     },
     [dispatch]
   )
@@ -29,7 +31,27 @@ export const useScripts = () => {
       id: string,
       data: Partial<{ title: string; content: string; style: string }>
     ) => {
-      dispatch(updateScriptAsync({ id, data }))
+      console.log('updateScript in hook called with:', { id, data })
+
+      try {
+        const action = dispatch(updateScriptAsync({ id, data }))
+        console.log('updateScriptAsync dispatched')
+
+        // Return the promise
+        return action
+          .unwrap()
+          .then((result) => {
+            console.log('updateScriptAsync success:', result)
+            return result
+          })
+          .catch((error) => {
+            console.error('updateScriptAsync error:', error)
+            throw error
+          })
+      } catch (error) {
+        console.error('Error in updateScript:', error)
+        throw error
+      }
     },
     [dispatch]
   )

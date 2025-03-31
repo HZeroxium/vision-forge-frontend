@@ -80,6 +80,10 @@ export default function GenerateVideoFlowPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  // Add isGeneratingScript state
+  const [isGeneratingScript, setIsGeneratingScript] = useState(false)
+  const [isRegeneratingImages, setIsRegeneratingImages] = useState(false)
+
   // Dropdown options
   const contentStyleOptions = ['default', 'child', 'professional', 'in-depth']
   const languageOptions = [
@@ -144,12 +148,14 @@ export default function GenerateVideoFlowPage() {
     }
     setError(null)
     setLoading(true)
+    setIsGeneratingScript(true)
     try {
       await createScript({ title, style: selectedContentStyle })
     } catch (err: any) {
       setError('Failed to create script')
     } finally {
       setLoading(false)
+      setIsGeneratingScript(false)
     }
   }
 
@@ -160,27 +166,51 @@ export default function GenerateVideoFlowPage() {
   }, [script])
 
   const handleUpdateScript = async () => {
-    if (!script) return
-    if (localContent === script.content) return
+    console.log('handleUpdateScript called', { script, localContent })
+
+    if (!script) {
+      console.error('Cannot update: script is null')
+      setError('Script not found')
+      return
+    }
+
+    if (localContent === script.content) {
+      console.log('No changes detected in script content')
+      return
+    }
+
+    console.log('Updating script with new content...')
     setLoading(true)
+
     try {
-      await updateScript(script.id, { content: localContent })
+      const result = await updateScript(script.id, { content: localContent })
+      console.log('Script update successful:', result)
+      return result // Return the result to propagate the success
     } catch (err: any) {
-      setError('Failed to update script')
+      console.error('Failed to update script:', err)
+      setError(err.message || 'Failed to update script')
+      throw err // Rethrow to propagate the error
     } finally {
       setLoading(false)
     }
   }
 
-  const handleProceedToImages = async () => {
+  // Tách logic cập nhật script và tạo ảnh thành hàm riêng
+  const handleUpdateScriptAndGenerateImages = async () => {
     if (localContent !== script?.content) {
-      await handleUpdateScript()
+      try {
+        await handleUpdateScript()
+      } catch (err) {
+        console.error('Failed to update script before generating images:', err)
+        // Tiếp tục tạo ảnh ngay cả khi cập nhật script thất bại
+      }
     }
 
-    // Only generate images if they don't exist already
+    // Chỉ tạo hình ảnh nếu chưa có
     if (!imagesData) {
-      setLoading(true)
+      setIsRegeneratingImages(true) // Hiển thị trạng thái loading trong ImagesStep
       setError(null)
+
       try {
         const imagesResponse = await generateImages({
           content: localContent,
@@ -189,15 +219,17 @@ export default function GenerateVideoFlowPage() {
         setImagesData(imagesResponse)
       } catch (err: any) {
         setError('Failed to generate images')
-        setLoading(false)
-        return // Don't proceed if image generation fails
+        console.error('Error generating images:', err)
       } finally {
-        setLoading(false)
+        setIsRegeneratingImages(false)
       }
     }
+  }
 
-    // Navigate to images step after ensuring we have images
+  // Giữ lại handleProceedToImages nhưng sửa lại để gọi hàm mới
+  const handleProceedToImages = async () => {
     navigateToStep('images')
+    handleUpdateScriptAndGenerateImages()
   }
 
   // --- STEP 2: Images & Scripts Editing Handlers ---
@@ -213,6 +245,7 @@ export default function GenerateVideoFlowPage() {
     if (!localContent) return
     setLoading(true)
     setError(null)
+    setIsRegeneratingImages(true)
     try {
       const imagesResponse = await generateImages({
         content: localContent,
@@ -223,13 +256,18 @@ export default function GenerateVideoFlowPage() {
       setError('Failed to regenerate images')
     } finally {
       setLoading(false)
+      setIsRegeneratingImages(false)
     }
   }
 
   // --- STEP NAVIGATION HANDLERS ---
   const handleNextStep = () => {
     if (step === 'script' && script) {
-      handleProceedToImages()
+      // Ngay lập tức chuyển sang bước Images
+      navigateToStep('images')
+
+      // Sau đó bắt đầu quá trình cập nhật script và tạo hình ảnh
+      handleUpdateScriptAndGenerateImages()
     } else if (step === 'images') {
       navigateToStep('audio')
     } else if (step === 'audio') {
@@ -342,6 +380,7 @@ export default function GenerateVideoFlowPage() {
             contentStyleOptions={contentStyleOptions}
             languageOptions={languageOptions}
             onReset={handleReset}
+            isGeneratingScript={isGeneratingScript}
           />
         </PageTransition>
 
@@ -349,14 +388,13 @@ export default function GenerateVideoFlowPage() {
           isVisible={step === 'images'}
           direction={transitionDirection}
         >
-          {imagesData && (
-            <ImagesStep
-              imagesData={imagesData}
-              onEditImageScript={handleEditImageScript}
-              onRegenerateImages={handleRegenerateImages}
-              onProceedToAudio={() => navigateToStep('audio')}
-            />
-          )}
+          <ImagesStep
+            imagesData={imagesData}
+            onEditImageScript={handleEditImageScript}
+            onRegenerateImages={handleRegenerateImages}
+            onProceedToAudio={() => navigateToStep('audio')}
+            isRegeneratingImages={isRegeneratingImages}
+          />
         </PageTransition>
 
         <PageTransition

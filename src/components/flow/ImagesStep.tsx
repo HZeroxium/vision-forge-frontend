@@ -1,6 +1,6 @@
 // src/components/flow/ImagesStep.tsx
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Box,
   Button,
@@ -18,6 +18,8 @@ import {
   Tooltip,
   Chip,
   Divider,
+  CircularProgress,
+  Skeleton,
 } from '@mui/material'
 import SaveIcon from '@mui/icons-material/Save'
 import RefreshIcon from '@mui/icons-material/Refresh'
@@ -30,10 +32,11 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import NavigateNextIcon from '@mui/icons-material/NavigateNext'
 
 interface ImagesStepProps {
-  imagesData: { image_urls: string[]; scripts: string[] }
+  imagesData: { image_urls: string[]; scripts: string[] } | null
   onEditImageScript: (index: number, newScript: string) => void
   onRegenerateImages: () => Promise<void>
   onProceedToAudio: () => void
+  isRegeneratingImages?: boolean
 }
 
 const ImagesStep: React.FC<ImagesStepProps> = ({
@@ -41,14 +44,54 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
   onEditImageScript,
   onRegenerateImages,
   onProceedToAudio,
+  isRegeneratingImages = false,
 }) => {
   const theme = useTheme()
-  const [editedScripts, setEditedScripts] = useState<boolean[]>(
-    Array(imagesData.scripts.length).fill(false)
-  )
+
+  // State quản lý
+  const [editedScripts, setEditedScripts] = useState<boolean[]>([])
   const [showSaveNotification, setShowSaveNotification] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [loadingImages, setLoadingImages] = useState<boolean[]>([])
+
+  // QUAN TRỌNG: useEffect PHẢI được khai báo trước bất kỳ câu lệnh return nào
+  useEffect(() => {
+    if (imagesData) {
+      // Trạng thái scripts
+      setEditedScripts(Array(imagesData.scripts.length).fill(false))
+
+      // Reset currentImageIndex nếu vượt quá số lượng ảnh mới
+      if (currentImageIndex >= imagesData.image_urls.length) {
+        setCurrentImageIndex(0)
+      }
+
+      // Reset trạng thái loading của tất cả ảnh
+      setLoadingImages(Array(imagesData.image_urls.length).fill(false))
+    }
+  }, [imagesData, currentImageIndex]) // Thêm currentImageIndex vào dependencies
+
+  // BÂY GIỜ đặt câu lệnh return
+  if (!imagesData) {
+    return (
+      <Box
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        minHeight="400px"
+        gap={3}
+      >
+        <CircularProgress size={60} />
+        <Typography variant="h6" color="text.secondary">
+          Generating images from your script...
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          This may take a moment. AI is creating visuals based on your content.
+        </Typography>
+      </Box>
+    )
+  }
 
   const handleScriptChange = (index: number, newScript: string) => {
     onEditImageScript(index, newScript)
@@ -80,6 +123,18 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen)
+  }
+
+  const handleImageLoad = (index: number) => {
+    const newLoadingImages = [...loadingImages]
+    newLoadingImages[index] = false
+    setLoadingImages(newLoadingImages)
+  }
+
+  const handleRegenerateImagesClick = async () => {
+    // Set all images to loading state
+    setLoadingImages(Array(imagesData.image_urls.length).fill(true))
+    await onRegenerateImages()
   }
 
   return (
@@ -126,17 +181,40 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
                 position: 'relative',
               }}
             >
-              <CardMedia
-                component="img"
-                image={imagesData.image_urls[currentImageIndex]}
-                alt={`Generated ${currentImageIndex + 1}`}
-                sx={{
-                  height: isFullscreen ? 500 : 350,
-                  objectFit: 'cover',
-                  width: isFullscreen ? '100%' : { xs: '100%', md: '60%' },
-                  transition: 'all 0.3s ease',
-                }}
-              />
+              {isRegeneratingImages || loadingImages[currentImageIndex] ? (
+                <Box
+                  sx={{
+                    height: isFullscreen ? 500 : 350,
+                    width: isFullscreen ? '100%' : { xs: '100%', md: '60%' },
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: theme.palette.grey[100],
+                  }}
+                >
+                  <Box sx={{ textAlign: 'center' }}>
+                    <CircularProgress size={60} />
+                    <Typography variant="body2" sx={{ mt: 2 }}>
+                      {isRegeneratingImages
+                        ? 'Regenerating image...'
+                        : 'Loading image...'}
+                    </Typography>
+                  </Box>
+                </Box>
+              ) : (
+                <CardMedia
+                  component="img"
+                  image={imagesData.image_urls[currentImageIndex]}
+                  alt={`Generated ${currentImageIndex + 1}`}
+                  sx={{
+                    height: isFullscreen ? 500 : 350,
+                    objectFit: 'cover',
+                    width: isFullscreen ? '100%' : { xs: '100%', md: '60%' },
+                    transition: 'all 0.3s ease',
+                  }}
+                  onLoad={() => handleImageLoad(currentImageIndex)}
+                />
+              )}
               <IconButton
                 sx={{
                   position: 'absolute',
@@ -148,6 +226,7 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
                   },
                 }}
                 onClick={toggleFullscreen}
+                disabled={isRegeneratingImages}
               >
                 {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
               </IconButton>
@@ -177,6 +256,7 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
                   onChange={(e) =>
                     handleScriptChange(currentImageIndex, e.target.value)
                   }
+                  disabled={isRegeneratingImages}
                   sx={{
                     mb: 2,
                     '& .MuiOutlinedInput-root': {
@@ -227,6 +307,7 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
             '&:hover': { backgroundColor: 'white', boxShadow: 2 },
           }}
           onClick={handlePrevImage}
+          disabled={isRegeneratingImages}
         >
           <ChevronLeftIcon fontSize="large" />
         </IconButton>
@@ -242,6 +323,7 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
             '&:hover': { backgroundColor: 'white', boxShadow: 2 },
           }}
           onClick={handleNextImage}
+          disabled={isRegeneratingImages}
         >
           <ChevronRightIcon fontSize="large" />
         </IconButton>
@@ -272,11 +354,21 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
               width: 80,
               height: 60,
               flexShrink: 0,
-              backgroundImage: `url(${url})`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundImage:
+                isRegeneratingImages || loadingImages[index]
+                  ? 'none'
+                  : `url(${url})`,
+              backgroundColor:
+                isRegeneratingImages || loadingImages[index]
+                  ? theme.palette.grey[200]
+                  : 'transparent',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               borderRadius: 1,
-              cursor: 'pointer',
+              cursor: isRegeneratingImages ? 'default' : 'pointer',
               border:
                 currentImageIndex === index
                   ? `2px solid ${theme.palette.primary.main}`
@@ -284,11 +376,15 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
               opacity: currentImageIndex === index ? 1 : 0.7,
               transition: 'all 0.2s ease-in-out',
               '&:hover': {
-                opacity: 1,
-                transform: 'scale(1.05)',
+                opacity: isRegeneratingImages ? 0.7 : 1,
+                transform: isRegeneratingImages ? 'none' : 'scale(1.05)',
               },
             }}
-          />
+          >
+            {(isRegeneratingImages || loadingImages[index]) && (
+              <CircularProgress size={20} />
+            )}
+          </Box>
         ))}
       </Box>
 
@@ -297,8 +393,15 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
         <Tooltip title="Generate a new set of images from your script">
           <Button
             variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={onRegenerateImages}
+            startIcon={
+              isRegeneratingImages ? (
+                <CircularProgress size={20} />
+              ) : (
+                <RefreshIcon />
+              )
+            }
+            onClick={handleRegenerateImagesClick}
+            disabled={isRegeneratingImages}
             sx={{
               borderRadius: 2,
               transition: 'all 0.2s ease',
@@ -308,7 +411,7 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
               },
             }}
           >
-            Regenerate Images
+            {isRegeneratingImages ? 'Regenerating...' : 'Regenerate Images'}
           </Button>
         </Tooltip>
 
@@ -318,7 +421,9 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
             color="primary"
             startIcon={<SaveIcon />}
             onClick={handleSaveAllChanges}
-            disabled={!editedScripts.some((edited) => edited)}
+            disabled={
+              !editedScripts.some((edited) => edited) || isRegeneratingImages
+            }
             sx={{
               borderRadius: 2,
               transition: 'all 0.2s ease',
@@ -337,6 +442,7 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
           color="primary"
           endIcon={<NavigateNextIcon />}
           onClick={onProceedToAudio}
+          disabled={isRegeneratingImages}
           sx={{
             ml: { xs: 0, sm: 'auto' },
             borderRadius: 2,
