@@ -27,7 +27,7 @@ interface ScriptStepProps {
   setLocalContent: (value: string) => void
   scriptExists: boolean
   onCreateScript: () => Promise<void>
-  onUpdateScript: () => Promise<void>
+  onUpdateScript: () => Promise<any> // Thay đổi từ Promise<void> thành Promise<any>
   onProceedToImages: () => Promise<void>
   contentStyleOptions: string[]
   languageOptions: { value: string; label: string }[]

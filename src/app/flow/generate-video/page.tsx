@@ -178,13 +178,13 @@ export default function GenerateVideoFlowPage() {
     setLoading(true)
 
     try {
-      const result = await updateScript(script.id, { content: localContent })
-      console.log('Script update successful:', result)
-      return result // Return the result to propagate the success
+      await updateScript(script.id, { content: localContent })
+      console.log('Script update successful')
+      // Loại bỏ dòng return result
     } catch (err: any) {
       console.error('Failed to update script:', err)
       setError(err.message || 'Failed to update script')
-      throw err // Rethrow to propagate the error
+      throw err // Vẫn giữ throw err để có thể bắt lỗi
     } finally {
       setLoading(false)
     }
@@ -342,7 +342,7 @@ export default function GenerateVideoFlowPage() {
 
       {/* {loading && (
         <Box display="flex" justifyContent="center" sx={{ my: 2 }}>
-          <LoadingIndicator isLoading={true} size={24} />
+          <LoadingIndicator isLoading={false} size={24} />
         </Box>
       )} */}
 
