@@ -405,25 +405,45 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
         </Tooltip>
 
         <Tooltip title="Save all your script edits">
-          <Button
-            variant="outlined"
-            color="primary"
-            startIcon={<SaveIcon />}
-            onClick={handleSaveAllChanges}
-            disabled={
-              !editedScripts.some((edited) => edited) || isRegeneratingImages
-            }
-            sx={{
-              borderRadius: 2,
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: 1,
-              },
-            }}
-          >
-            Save All Changes
-          </Button>
+          {!editedScripts.some((edited) => edited) || isRegeneratingImages ? (
+            <span>
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<SaveIcon />}
+                onClick={handleSaveAllChanges}
+                disabled={true}
+                sx={{
+                  borderRadius: 2,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: 1,
+                  },
+                }}
+              >
+                Save All Changes
+              </Button>
+            </span>
+          ) : (
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<SaveIcon />}
+              onClick={handleSaveAllChanges}
+              disabled={false}
+              sx={{
+                borderRadius: 2,
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: 1,
+                },
+              }}
+            >
+              Save All Changes
+            </Button>
+          )}
         </Tooltip>
 
         <Button

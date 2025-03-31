@@ -13,14 +13,14 @@ import {
   MenuItem,
   Typography,
   Toolbar,
-  CircularProgress,
 } from '@mui/material'
+import LoadingIndicator from '../common/LoadingIndicator'
 import { useAppSelector, useAppDispatch } from '@store/store'
 import { useRouter } from 'next/navigation'
-import { fetchUserProfile } from '@store/authSlice' // You'll need to import your fetch user action
+import { fetchUserProfile } from '@store/authSlice'
 
 function TopNav() {
-  // Always call hooks at the top level in the same order
+  const [visible, setVisible] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [authChecking, setAuthChecking] = useState(true)
   const { user } = useAppSelector((state) => state.auth)
@@ -32,7 +32,12 @@ function TopNav() {
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
 
-  // Improve authentication check to handle edge cases
+  // Hiển thị component sau khi client-side rendering
+  useEffect(() => {
+    setVisible(true)
+  }, [])
+
+  // Chỉ kiểm tra auth sau khi component đã được mount ở client
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token')
@@ -40,11 +45,9 @@ function TopNav() {
       if (token) {
         if (!user) {
           try {
-            // Dispatch an action to fetch user data using the stored token
             await dispatch(fetchUserProfile())
           } catch (error) {
             console.error('Error loading user profile:', error)
-            // The fetchUserProfile thunk will handle token removal on failure
           }
         }
       }
@@ -71,14 +74,14 @@ function TopNav() {
     router.push('/profile')
   }
 
-  // Define static fallback content
+  // Static fallback content
   const staticContent = {
     login: 'Login',
     register: 'Register',
     welcome: user ? `Welcome, ${user.name || user.email}` : 'Welcome',
   }
 
-  // Use translations only after mounted, but don't conditionally call hooks
+  // Use translations only after mounted
   const content = {
     login: mounted ? t('loginTitle') : staticContent.login,
     register: mounted ? t('registerTitle') : staticContent.register,
@@ -86,6 +89,11 @@ function TopNav() {
       mounted && user
         ? t('welcomeUser', { name: user.name || user.email })
         : staticContent.welcome,
+  }
+
+  // Không render gì khi ở server-side
+  if (!visible) {
+    return null
   }
 
   return (
@@ -99,8 +107,7 @@ function TopNav() {
         </Link>
         <div className="flex items-center gap-4">
           {authChecking ? (
-            // Show loading indicator while checking authentication
-            <CircularProgress size={24} />
+            <LoadingIndicator isLoading={true} size={24} showAfterDelay={0} />
           ) : user ? (
             <>
               <Typography variant="body1">{content.welcome}</Typography>
