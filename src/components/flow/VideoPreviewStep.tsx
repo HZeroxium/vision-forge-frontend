@@ -30,6 +30,7 @@ const VideoPreviewStep: React.FC<VideoPreviewStepProps> = ({
 }) => {
   const [isVideoLoading, setIsVideoLoading] = useState(true)
   const [videoError, setVideoError] = useState<string | null>(null)
+  const [videoLoadAttempts, setVideoLoadAttempts] = useState(0)
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
@@ -45,8 +46,23 @@ const VideoPreviewStep: React.FC<VideoPreviewStepProps> = ({
   useEffect(() => {
     if (videoUrl) {
       setVideoError(null)
+      setIsVideoLoading(true)
+      setVideoLoadAttempts(0)
     }
   }, [videoUrl])
+
+  // Retry loading video if we have a URL but encountered an error
+  useEffect(() => {
+    if (videoError && videoUrl && videoLoadAttempts < 3) {
+      const timer = setTimeout(() => {
+        console.log(`Retrying video load (attempt ${videoLoadAttempts + 1})`)
+        setIsVideoLoading(true)
+        setVideoError(null)
+        setVideoLoadAttempts((prev) => prev + 1)
+      }, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [videoError, videoUrl, videoLoadAttempts])
 
   // Progress status message based on job state
   const getStatusMessage = () => {
@@ -62,7 +78,9 @@ const VideoPreviewStep: React.FC<VideoPreviewStepProps> = ({
         if (progressPercent <= 70) return 'Creating images from prompts...'
         return 'Assembling final video with motion effects...'
       case 'completed':
-        return videoUrl ? 'Video generation complete!' : 'Finalizing video...'
+        return videoUrl
+          ? 'Video generation complete!'
+          : 'Finalizing video, please wait...'
       case 'failed':
         return `Failed: ${jobProgress.error || 'Unknown error'}`
       default:
@@ -71,6 +89,7 @@ const VideoPreviewStep: React.FC<VideoPreviewStepProps> = ({
   }
 
   const handleVideoError = () => {
+    console.error('Video loading failed')
     setVideoError('Failed to load the video. Please try again.')
     setIsVideoLoading(false)
   }
@@ -166,7 +185,10 @@ const VideoPreviewStep: React.FC<VideoPreviewStepProps> = ({
             controls
             width={isMobile ? '100%' : '600'}
             src={videoUrl || undefined}
-            onLoadedData={() => setIsVideoLoading(false)}
+            onLoadedData={() => {
+              console.log('Video loaded successfully')
+              setIsVideoLoading(false)
+            }}
             onError={handleVideoError}
             style={{
               opacity: isVideoLoading ? 0.3 : 1,
@@ -174,6 +196,16 @@ const VideoPreviewStep: React.FC<VideoPreviewStepProps> = ({
               margin: '0 auto',
             }}
           />
+        </Box>
+      )}
+
+      {/* Completed state but no video yet */}
+      {jobProgress?.state === 'completed' && !videoUrl && !showProgress && (
+        <Box sx={{ textAlign: 'center', my: 4 }}>
+          <CircularProgress size={40} />
+          <Typography variant="body1" sx={{ mt: 2 }}>
+            Video generated! Retrieving video file...
+          </Typography>
         </Box>
       )}
 

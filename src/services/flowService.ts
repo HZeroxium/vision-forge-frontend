@@ -1,4 +1,5 @@
 // src/services/flowService.ts
+import { JobProgress } from '@/utils/sse'
 import api from './api'
 import { Video } from './videoService'
 
@@ -54,6 +55,7 @@ export const generateVideoFlow = async (data: {
     const response = await api.post('/flow/generate-video', data)
 
     if (!response.data || !response.data.url) {
+      console.error('Invalid video generation response:', response.data)
       throw new Error('Invalid response from video generation API')
     }
 
@@ -96,10 +98,13 @@ export const startVideoGenerationJob = async (data: {
   }
 }
 
-// Get status for a specific job
-export const getJobStatus = async (jobId: string): Promise<any> => {
+// Improved job status function that includes potential result data
+export const getJobStatus = async (
+  jobId: string
+): Promise<JobProgress & { result?: any }> => {
   try {
     const response = await api.get(`/flow/job/${jobId}/status`)
+    console.log(`Job status for ${jobId}:`, response.data)
     return response.data
   } catch (error: any) {
     console.error(`Error fetching status for job ${jobId}:`, error)
@@ -113,4 +118,18 @@ export const getJobStatus = async (jobId: string): Promise<any> => {
 export const getVideoById = async (videoId: string): Promise<Video> => {
   const response = await api.get(`/videos/${videoId}`)
   return response.data
+}
+
+// Get video by scriptId - add this new function
+export const getVideoByScriptId = async (scriptId: string): Promise<Video> => {
+  try {
+    const response = await api.get(`/flow/video-by-script/${scriptId}`)
+    console.log(`Retrieved video for script ${scriptId}:`, response.data)
+    return response.data
+  } catch (error: any) {
+    console.error(`Error fetching video for script ${scriptId}:`, error)
+    throw new Error(
+      `Failed to get video by script ID: ${error.message || 'Unknown error'}`
+    )
+  }
 }

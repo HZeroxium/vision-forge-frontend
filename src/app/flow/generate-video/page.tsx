@@ -19,6 +19,7 @@ import {
   getVideoById,
   AudioPreview,
   getJobStatus,
+  getVideoByScriptId,
 } from '@services/flowService'
 import {
   subscribeToJobProgress,
@@ -321,8 +322,8 @@ export default function GenerateVideoFlowPage() {
 
       setCurrentJobId(jobResponse.jobId)
 
-      // Set up a reference to track if the job complete handler has run
-      // This prevents duplicate processing when the job completes
+      // Use a ref object instead of a normal variable to track completion
+      // This ensures the latest value is always used in the callback
       const jobCompletionRef = { completed: false }
 
       const cleanup = subscribeToJobProgress(
@@ -375,17 +376,27 @@ export default function GenerateVideoFlowPage() {
     try {
       // Get job status to get the video reference
       const jobStatus = await getJobStatus(jobId)
+      console.log('Job status:', jobStatus)
 
       if (jobStatus.state !== 'completed') {
         throw new Error('Job is not completed')
       }
 
-      // Get video details from the job result
-      const videoResponse = await generateVideoFlow({
-        scriptId: script.id,
-        imageUrls: imagesData.image_urls,
-        scripts: imagesData.scripts,
-      })
+      // The backend might include the video information directly in the job result
+      if (jobStatus.result && jobStatus.result.url) {
+        console.log('Setting video URL from job result:', jobStatus.result.url)
+        setVideoUrl(jobStatus.result.url)
+        return jobStatus.result
+      }
+
+      // If no direct video URL in job result, get the video by script ID
+      // instead of calling generateVideoFlow which creates a new video
+      console.log('Fetching video using script ID')
+      const videoResponse = await getVideoByScriptId(script.id)
+
+      if (!videoResponse || !videoResponse.url) {
+        throw new Error('No video URL returned from server')
+      }
 
       console.log('Setting video URL:', videoResponse.url)
       setVideoUrl(videoResponse.url)

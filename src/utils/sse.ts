@@ -31,6 +31,9 @@ export const subscribeToJobProgress = (
 
   console.log(`Opening SSE connection for job ${jobId}`)
 
+  // Track if we've already processed a completion event
+  let completionProcessed = false
+
   // Create EventSource connection to the backend
   const eventSource = new EventSource(
     `http://localhost:5000/api/flow/job/${jobId}/stream`
@@ -40,18 +43,31 @@ export const subscribeToJobProgress = (
   eventSource.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data) as JobProgress
-      onProgress(data)
 
-      // Close the connection if the job is completed or failed
+      // Skip duplicate completion events (this is crucial)
+      if (
+        (data.state === 'completed' || data.state === 'failed') &&
+        completionProcessed
+      ) {
+        console.log(`Ignoring duplicate ${data.state} event for job ${jobId}`)
+        return
+      }
+
+      // Mark completion as processed if this is a completion event
       if (data.state === 'completed' || data.state === 'failed') {
+        completionProcessed = true
+
+        // When job completes, close the connection immediately to prevent duplicate events
         console.log(
           `Job ${data.jobId} ${data.state} with progress ${data.progress}%, closing SSE connection`
         )
         setTimeout(() => {
           eventSource.close()
           console.log(`SSE connection closed for job ${jobId}`)
-        }, 500) // Short delay to ensure any last messages are processed
+        }, 100) // Reduce timeout to close connection more quickly
       }
+
+      onProgress(data)
     } catch (error) {
       console.error('Error parsing SSE data:', error)
       if (onError) onError(error)
