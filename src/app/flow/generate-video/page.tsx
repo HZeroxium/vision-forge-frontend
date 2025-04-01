@@ -1,6 +1,6 @@
 // src/app/flow/generate-video/page.tsx
 'use client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Container, Typography, Box, Paper } from '@mui/material'
 import ScriptStep from '@components/flow/ScriptStep'
 import ImagesStep from '@components/flow/ImagesStep'
@@ -9,14 +9,16 @@ import VideoPreviewStep from '@components/flow/VideoPreviewStep'
 import ProgressTracker from '@components/flow/ProgressTracker'
 import StepNavigation from '@components/flow/StepNavigation'
 import PageTransition from '@components/flow/PageTransition'
-import LoadingIndicator from '@components/common/LoadingIndicator'
 import { useScripts } from '@hooks/useScripts'
 import {
   generateImages,
-  generateVideoFlow,
+  startVideoGenerationJob,
   getPreviewVoiceUrl,
   AudioPreview,
+  getJobStatus,
+  getVideoByScriptId,
 } from '@services/flowService'
+import { subscribeToJobProgress, JobProgress } from '@utils/sse'
 
 /**
  * Define the steps of the flow.
@@ -78,6 +80,25 @@ export default function GenerateVideoFlowPage() {
   // Add isGeneratingScript state
   const [isGeneratingScript, setIsGeneratingScript] = useState(false)
   const [isRegeneratingImages, setIsRegeneratingImages] = useState(false)
+
+  // Add new state for job tracking
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null)
+  const [jobProgress, setJobProgress] = useState<JobProgress | null>(null)
+  const sseCleanupRef = useRef<(() => void) | null>(null)
+
+  // Add a new state to track initial image generation
+  const [isGeneratingInitialImages, setIsGeneratingInitialImages] =
+    useState(false)
+
+  // Cleanup SSE connection when component unmounts
+  useEffect(() => {
+    return () => {
+      if (sseCleanupRef.current) {
+        sseCleanupRef.current()
+        sseCleanupRef.current = null
+      }
+    }
+  }, [])
 
   // Dropdown options
   const contentStyleOptions = ['default', 'child', 'professional', 'in-depth']
@@ -204,6 +225,7 @@ export default function GenerateVideoFlowPage() {
     // Chỉ tạo hình ảnh nếu chưa có
     if (!imagesData) {
       setIsRegeneratingImages(true) // Hiển thị trạng thái loading trong ImagesStep
+      setIsGeneratingInitialImages(true) // Set the initial generation flag
       setError(null)
 
       try {
@@ -217,6 +239,7 @@ export default function GenerateVideoFlowPage() {
         console.error('Error generating images:', err)
       } finally {
         setIsRegeneratingImages(false)
+        setIsGeneratingInitialImages(false) // Clear the initial generation flag
       }
     }
   }
@@ -263,7 +286,12 @@ export default function GenerateVideoFlowPage() {
 
       // Sau đó bắt đầu quá trình cập nhật script và tạo hình ảnh
       handleUpdateScriptAndGenerateImages()
-    } else if (step === 'images') {
+    } else if (
+      step === 'images' &&
+      !isGeneratingInitialImages &&
+      !isRegeneratingImages
+    ) {
+      // Only proceed if images are not being generated
       navigateToStep('audio')
     } else if (step === 'audio') {
       handleProceedToVideo()
@@ -281,31 +309,117 @@ export default function GenerateVideoFlowPage() {
   // --- STEP 3: Audio Configuration Handlers ---
   const handleProceedToVideo = async () => {
     navigateToStep('videoGenerating')
-    // Start video generation and show spinner immediately.
     if (!script || !imagesData) return
 
     setLoading(true)
     setError(null)
+    setJobProgress(null)
+    setVideoUrl(null) // Reset video URL when starting a new generation
 
     try {
-      // The backend expects the scripts from ImagesStep - these already contain user edits
-      const videoResponse = await generateVideoFlow({
+      // Start the video generation job
+      const jobResponse = await startVideoGenerationJob({
         scriptId: script.id,
         imageUrls: imagesData.image_urls,
         scripts: imagesData.scripts,
       })
-      setVideoUrl(videoResponse.url)
-      navigateToStep('videoGenerated')
-    } catch (err: any) {
-      setError('Failed to generate video')
-      navigateToStep('audio') // go back to audio step if video generation fails
+
+      setCurrentJobId(jobResponse.jobId)
+
+      // Use a ref object instead of a normal variable to track completion
+      // This ensures the latest value is always used in the callback
+      const jobCompletionRef = { completed: false }
+
+      const cleanup = subscribeToJobProgress(
+        jobResponse.jobId,
+        (progress) => {
+          console.log(
+            `Job progress update: ${progress.state} - ${progress.progress}%`
+          )
+          setJobProgress(progress)
+
+          // Only process completion once and only if we haven't already
+          if (progress.state === 'completed' && !jobCompletionRef.completed) {
+            console.log('Job completed, fetching video details')
+            jobCompletionRef.completed = true
+
+            // Get the video URL from the completed job
+            fetchCompletedVideo(jobResponse.jobId)
+              .then(() => {
+                navigateToStep('videoGenerated')
+              })
+              .catch((err) => {
+                console.error('Error fetching completed video:', err)
+                setError('Failed to retrieve the generated video')
+              })
+          } else if (progress.state === 'failed') {
+            setError(progress.error || 'Video generation failed')
+            navigateToStep('audio')
+          }
+        },
+        (error) => {
+          console.error('SSE error:', error)
+          setError('Connection error during video generation')
+        }
+      )
+
+      sseCleanupRef.current = cleanup
+    } catch (err) {
+      console.error('Failed to start video generation:', err)
+      setError('Failed to start video generation')
+      navigateToStep('audio')
     } finally {
       setLoading(false)
     }
   }
 
+  // Function to fetch the final video from a completed job
+  const fetchCompletedVideo = async (jobId: string) => {
+    if (!script || !imagesData) return
+
+    try {
+      // Get job status to get the video reference
+      const jobStatus = await getJobStatus(jobId)
+      console.log('Job status:', jobStatus)
+
+      if (jobStatus.state !== 'completed') {
+        throw new Error('Job is not completed')
+      }
+
+      // The backend might include the video information directly in the job result
+      if (jobStatus.result && jobStatus.result.url) {
+        console.log('Setting video URL from job result:', jobStatus.result.url)
+        setVideoUrl(jobStatus.result.url)
+        return jobStatus.result
+      }
+
+      // If no direct video URL in job result, get the video by script ID
+      // instead of calling generateVideoFlow which creates a new video
+      console.log('Fetching video using script ID')
+      const videoResponse = await getVideoByScriptId(script.id)
+
+      if (!videoResponse || !videoResponse.url) {
+        throw new Error('No video URL returned from server')
+      }
+
+      console.log('Setting video URL:', videoResponse.url)
+      setVideoUrl(videoResponse.url)
+      return videoResponse
+    } catch (err) {
+      console.error('Failed to fetch video for completed job:', err)
+      setError('Failed to retrieve the completed video')
+      throw err
+    }
+  }
+
   // --- Reset Flow Handler ---
   const handleReset = () => {
+    // Clean up any existing SSE connection
+    if (sseCleanupRef.current) {
+      sseCleanupRef.current()
+      sseCleanupRef.current = null
+    }
+
     setTitle('')
     setSelectedContentStyle('default')
     setSelectedLanguage('en')
@@ -316,6 +430,8 @@ export default function GenerateVideoFlowPage() {
     setAudioVoice('alloy') // Reset to default voice
     navigateToStep('script')
     resetScriptState()
+    setCurrentJobId(null)
+    setJobProgress(null)
   }
 
   // Determine if Next button should be disabled
@@ -389,6 +505,7 @@ export default function GenerateVideoFlowPage() {
             onRegenerateImages={handleRegenerateImages}
             onProceedToAudio={() => navigateToStep('audio')}
             isRegeneratingImages={isRegeneratingImages}
+            isGeneratingInitialImages={isGeneratingInitialImages} // Pass the new prop
           />
         </PageTransition>
 
@@ -414,34 +531,15 @@ export default function GenerateVideoFlowPage() {
         </PageTransition>
 
         <PageTransition
-          isVisible={step === 'videoGenerating'}
+          isVisible={step === 'videoGenerating' || step === 'videoGenerated'}
           direction={transitionDirection}
         >
-          <Box
-            display="flex"
-            flexDirection="column"
-            alignItems="center"
-            gap={2}
-            py={8}
-          >
-            <Typography variant="h6">
-              Generating video, please wait...
-            </Typography>
-            <LoadingIndicator
-              isLoading={true}
-              size={60}
-              message="This may take a few minutes"
-            />
-          </Box>
-        </PageTransition>
-
-        <PageTransition
-          isVisible={step === 'videoGenerated'}
-          direction={transitionDirection}
-        >
-          {videoUrl && (
-            <VideoPreviewStep videoUrl={videoUrl} onReset={handleReset} />
-          )}
+          <VideoPreviewStep
+            videoUrl={videoUrl}
+            onReset={handleReset}
+            jobProgress={jobProgress}
+            isGenerating={step === 'videoGenerating'}
+          />
         </PageTransition>
       </Paper>
 
@@ -451,6 +549,7 @@ export default function GenerateVideoFlowPage() {
         onNext={handleNextStep}
         disableNext={isNextDisabled()}
         nextLabel={step === 'audio' ? 'Generate Video' : 'Next Step'}
+        isGeneratingImages={isRegeneratingImages || isGeneratingInitialImages} // Pass combined state
       />
     </Container>
   )

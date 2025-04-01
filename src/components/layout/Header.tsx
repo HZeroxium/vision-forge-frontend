@@ -8,14 +8,15 @@ import { useRouter } from 'next/navigation'
 const Header: React.FC = () => {
   const router = useRouter()
   return (
-    <header className="flex justify-between items-center p-4 bg-blue-600 text-white">
-      <h1
-        className="text-xl font-bold cursor-pointer"
-        onClick={() => router.push('/')}
-      >
-        {/* Vision Forge */}
-      </h1>
-    </header>
+    <></>
+    // <header className="flex justify-between items-center p-4 text-white">
+    //   <h1
+    //     className="text-xl font-bold cursor-pointer"
+    //     onClick={() => router.push('/')}
+    //   >
+    //     {/* Vision Forge */}
+    //   </h1>
+    // </header>
   )
 }
 
