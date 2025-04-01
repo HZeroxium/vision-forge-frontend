@@ -1,6 +1,6 @@
-// src/components/navigation/TopNav.tsx
+// app/components/navigation/TopNav.tsx
 'use client'
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import Link from 'next/link'
 import HomeIcon from '@mui/icons-material/Home'
@@ -8,21 +8,56 @@ import PersonIcon from '@mui/icons-material/Person'
 import LanguageIcon from '@mui/icons-material/Language'
 import {
   AppBar,
-  Toolbar,
   IconButton,
   Menu,
   MenuItem,
   Typography,
-  Button,
+  Toolbar,
 } from '@mui/material'
-import { useAppSelector } from '@store/store'
+import LoadingIndicator from '../common/LoadingIndicator'
+import { useAppSelector, useAppDispatch } from '@store/store'
 import { useRouter } from 'next/navigation'
+import { fetchUserProfile } from '@store/authSlice'
 
-export default function TopNav() {
-  const { i18n, t } = useTranslation('auth')
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
-  const { user } = useAppSelector((state) => state.auth) // Get user from auth slice
+function TopNav() {
+  const [visible, setVisible] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [authChecking, setAuthChecking] = useState(true)
+  const { user } = useAppSelector((state) => state.auth)
   const router = useRouter()
+  const dispatch = useAppDispatch()
+
+  // IMPORTANT: Always call useTranslation unconditionally
+  const { t, i18n } = useTranslation('auth')
+
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+
+  // Hiển thị component sau khi client-side rendering
+  useEffect(() => {
+    setVisible(true)
+  }, [])
+
+  // Chỉ kiểm tra auth sau khi component đã được mount ở client
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token')
+
+      if (token) {
+        if (!user) {
+          try {
+            await dispatch(fetchUserProfile())
+          } catch (error) {
+            console.error('Error loading user profile:', error)
+          }
+        }
+      }
+
+      setAuthChecking(false)
+      setMounted(true)
+    }
+
+    checkAuth()
+  }, [dispatch, user])
 
   const handleLangMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
@@ -39,24 +74,43 @@ export default function TopNav() {
     router.push('/profile')
   }
 
+  // Static fallback content
+  const staticContent = {
+    login: 'Login',
+    register: 'Register',
+    welcome: user ? `Welcome, ${user.name || user.email}` : 'Welcome',
+  }
+
+  // Use translations only after mounted
+  const content = {
+    login: mounted ? t('loginTitle') : staticContent.login,
+    register: mounted ? t('registerTitle') : staticContent.register,
+    welcome:
+      mounted && user
+        ? t('welcomeUser', { name: user.name || user.email })
+        : staticContent.welcome,
+  }
+
+  // Không render gì khi ở server-side
+  if (!visible) {
+    return null
+  }
+
   return (
     <AppBar position="static" color="inherit" className="shadow-md">
       <Toolbar className="flex justify-between">
-        {/* Left side: brand or home link */}
         <Link href="/" className="flex items-center gap-2 no-underline">
           <HomeIcon fontSize="medium" />
           <Typography variant="h6" className="text-inherit no-underline">
             Vision Forge
           </Typography>
         </Link>
-
-        {/* Right side: Conditional rendering based on auth state */}
         <div className="flex items-center gap-4">
-          {user ? (
+          {authChecking ? (
+            <LoadingIndicator isLoading={true} size={24} showAfterDelay={0} />
+          ) : user ? (
             <>
-              <Typography variant="body1">
-                {t('welcomeUser', { name: user.name || user.email })}
-              </Typography>
+              <Typography variant="body1">{content.welcome}</Typography>
               <IconButton onClick={handleProfileClick} color="inherit">
                 <PersonIcon />
               </IconButton>
@@ -68,18 +122,16 @@ export default function TopNav() {
                 className="flex items-center gap-1 no-underline"
               >
                 <PersonIcon fontSize="small" />
-                <Typography variant="body1">{t('loginTitle')}</Typography>
+                <Typography variant="body1">{content.login}</Typography>
               </Link>
               <Link
                 href="/auth/register"
                 className="flex items-center gap-1 no-underline"
               >
-                <Typography variant="body1">{t('registerTitle')}</Typography>
+                <Typography variant="body1">{content.register}</Typography>
               </Link>
             </>
           )}
-
-          {/* Language Switcher */}
           <IconButton
             onClick={handleLangMenuOpen}
             color="primary"
@@ -104,3 +156,5 @@ export default function TopNav() {
     </AppBar>
   )
 }
+
+export default TopNav

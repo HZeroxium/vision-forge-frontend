@@ -1,40 +1,83 @@
 // src/app/flow/generate-video/page.tsx
 'use client'
 import React, { useState, useEffect } from 'react'
-import {
-  Container,
-  TextField,
-  Button,
-  Typography,
-  CircularProgress,
-  Box,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
-} from '@mui/material'
+import { Container, Typography, Box, Paper } from '@mui/material'
+import ScriptStep from '@components/flow/ScriptStep'
+import ImagesStep from '@components/flow/ImagesStep'
+import AudioPreviewConfig from '@components/flow/AudioPreviewConfig'
+import VideoPreviewStep from '@components/flow/VideoPreviewStep'
+import ProgressTracker from '@components/flow/ProgressTracker'
+import StepNavigation from '@components/flow/StepNavigation'
+import PageTransition from '@components/flow/PageTransition'
+import LoadingIndicator from '@components/common/LoadingIndicator'
 import { useScripts } from '@hooks/useScripts'
-import { generateVideoFlow, previewAudio } from '@services/flowService'
-import { Video } from '@services/videoService'
+import {
+  generateImages,
+  generateVideoFlow,
+  getPreviewVoiceUrl,
+  AudioPreview,
+} from '@services/flowService'
+
+/**
+ * Define the steps of the flow.
+ * 'script'   - User creates & edits script.
+ * 'images'   - Generated images & per-image script editing.
+ * 'audio'    - Audio configuration & preview.
+ * 'videoGenerating' - Video is being generated (spinner shown).
+ * 'videoGenerated'  - Video is generated and preview is shown.
+ */
+type Step = 'script' | 'images' | 'audio' | 'videoGenerating' | 'videoGenerated'
 
 export default function GenerateVideoFlowPage() {
-  // Local state for form and process management
+  // Step management state
+  const [step, setStep] = useState<Step>('script')
+  const [previousStep, setPreviousStep] = useState<Step | null>(null)
+  const [transitionDirection, setTransitionDirection] = useState<
+    'right' | 'left'
+  >('right')
+
+  // State for Step 1 – Script Creation & Editing
   const [title, setTitle] = useState('')
   const [selectedContentStyle, setSelectedContentStyle] = useState('default')
   const [selectedLanguage, setSelectedLanguage] = useState('vi')
   const [localContent, setLocalContent] = useState('')
-  const [step, setStep] = useState<
-    'initial' | 'editing' | 'generating' | 'generated'
-  >('initial')
+
+  // State for Step 2 – Images & Scripts Editing
+  const [imagesData, setImagesData] = useState<{
+    image_urls: string[]
+    scripts: string[]
+  } | null>(null)
+
+  // State for Step 3 – Audio Configuration
+  const [previewAudioUrl, setPreviewAudioUrl] = useState<string | null>(null)
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false)
+  const [audioSpeed, setAudioSpeed] = useState(1)
+  const [audioVoice, setAudioVoice] = useState('alloy') // Default to 'alloy'
+  const [audioInstructions, setAudioInstructions] = useState('Clear')
+
+  // Hardcoded voice data based on backend information
+  const availableVoices: AudioPreview[] = [
+    { id: 'alloy', description: 'Neutral, balanced voice' },
+    { id: 'ash', description: 'Deep, resonant voice' },
+    { id: 'echo', description: 'Soft, gentle voice' },
+    { id: 'sage', description: 'Warm, friendly voice' },
+    { id: 'verse', description: 'Strong, authoritative voice' },
+  ]
+
+  // State for Step 4 – Video Generation/Preview
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
+
+  // Global script state from hook
+  const { script, createScript, updateScript, deleteScript, resetScriptState } =
+    useScripts()
+
+  // Local error & loading state
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // Audio configuration state
-  const [audioSpeed, setAudioSpeed] = useState(1) // default 1x
-  const [audioVoice, setAudioVoice] = useState('Default Voice')
-  const [audioInstructions, setAudioInstructions] = useState('Clear')
-  const [previewAudioUrl, setPreviewAudioUrl] = useState<string | null>(null)
+  // Add isGeneratingScript state
+  const [isGeneratingScript, setIsGeneratingScript] = useState(false)
+  const [isRegeneratingImages, setIsRegeneratingImages] = useState(false)
 
   // Dropdown options
   const contentStyleOptions = ['default', 'child', 'professional', 'in-depth']
@@ -46,20 +89,53 @@ export default function GenerateVideoFlowPage() {
     { value: 'de', label: 'German' },
   ]
   const audioSpeedOptions = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4]
-  const audioVoiceOptions = [
-    'Default Voice',
-    'Male',
-    'Female',
-    'Narrator',
-    'Young',
-  ]
   const audioInstructionsOptions = ['Clear', 'Dramatic', 'Calm', 'Energetic']
 
-  // Use our custom script hook to manage script state
-  const { script, createScript, updateScript, deleteScript, resetScriptState } =
-    useScripts()
+  // Helper function to change steps with proper transition direction
+  const navigateToStep = (newStep: Step) => {
+    setPreviousStep(step)
 
-  // Handler: Create a new script from title input and selected style.
+    // Set transition direction based on step progression
+    const stepOrder: Step[] = [
+      'script',
+      'images',
+      'audio',
+      'videoGenerating',
+      'videoGenerated',
+    ]
+    const currentIndex = stepOrder.indexOf(step)
+    const newIndex = stepOrder.indexOf(newStep)
+
+    setTransitionDirection(newIndex > currentIndex ? 'right' : 'left')
+    setStep(newStep)
+  }
+
+  // Load preview for default voice when component mounts
+  useEffect(() => {
+    if (audioVoice) {
+      handleVoiceChange(audioVoice)
+    }
+  }, [])
+
+  // Fetch audio preview when voice changes
+  const handleVoiceChange = async (voiceId: string) => {
+    if (!voiceId) return
+
+    setIsLoadingPreview(true)
+    setPreviewAudioUrl(null)
+
+    try {
+      const url = await getPreviewVoiceUrl(voiceId)
+      setPreviewAudioUrl(url)
+    } catch (err) {
+      console.error('Error fetching voice preview:', err)
+      setError('Failed to fetch voice preview')
+    } finally {
+      setIsLoadingPreview(false)
+    }
+  }
+
+  // --- STEP 1: Script Creation & Editing Handlers ---
   const handleCreateScript = async () => {
     if (!title) {
       setError('Title is required')
@@ -67,275 +143,315 @@ export default function GenerateVideoFlowPage() {
     }
     setError(null)
     setLoading(true)
+    setIsGeneratingScript(true)
     try {
       await createScript({ title, style: selectedContentStyle })
-      // When script is created, useScripts will store it in state.
     } catch (err: any) {
       setError('Failed to create script')
     } finally {
       setLoading(false)
+      setIsGeneratingScript(false)
     }
   }
 
-  // When script is created, update localContent and switch to editing step.
   useEffect(() => {
     if (script) {
       setLocalContent(script.content)
-      setStep('editing')
     }
   }, [script])
 
-  // Handler: Update script if content has been edited.
   const handleUpdateScript = async () => {
-    if (!script) return
-    // If no change, skip update.
-    if (localContent === script.content) return
+    console.log('handleUpdateScript called', { script, localContent })
+
+    if (!script) {
+      console.error('Cannot update: script is null')
+      setError('Script not found')
+      return
+    }
+
+    if (localContent === script.content) {
+      console.log('No changes detected in script content')
+      return
+    }
+
+    console.log('Updating script with new content...')
     setLoading(true)
+
     try {
       await updateScript(script.id, { content: localContent })
+      console.log('Script update successful')
+      // Loại bỏ dòng return result
     } catch (err: any) {
-      setError('Failed to update script')
+      console.error('Failed to update script:', err)
+      setError(err.message || 'Failed to update script')
+      throw err // Vẫn giữ throw err để có thể bắt lỗi
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDeleteScript = async () => {
-    if (!script) return
-    setLoading(true)
-    try {
-      await deleteScript(script.id)
-      // Reset state to allow user to create a new script from scratch.
-      setTitle('')
-      setSelectedContentStyle('default')
-      setSelectedLanguage('en')
-      setLocalContent('')
-      setStep('initial')
-    } catch (err: any) {
-      setError('Failed to delete script')
-    } finally {
-      setLoading(false)
+  // Tách logic cập nhật script và tạo ảnh thành hàm riêng
+  const handleUpdateScriptAndGenerateImages = async () => {
+    if (localContent !== script?.content) {
+      try {
+        await handleUpdateScript()
+      } catch (err) {
+        console.error('Failed to update script before generating images:', err)
+        // Tiếp tục tạo ảnh ngay cả khi cập nhật script thất bại
+      }
+    }
+
+    // Chỉ tạo hình ảnh nếu chưa có
+    if (!imagesData) {
+      setIsRegeneratingImages(true) // Hiển thị trạng thái loading trong ImagesStep
+      setError(null)
+
+      try {
+        const imagesResponse = await generateImages({
+          content: localContent,
+          style: selectedContentStyle,
+        })
+        setImagesData(imagesResponse)
+      } catch (err: any) {
+        setError('Failed to generate images')
+        console.error('Error generating images:', err)
+      } finally {
+        setIsRegeneratingImages(false)
+      }
     }
   }
 
-  // Handler: Preview audio based on selected audio configuration.
-  const handlePreviewAudio = async () => {
+  // Giữ lại handleProceedToImages nhưng sửa lại để gọi hàm mới
+  const handleProceedToImages = async () => {
+    navigateToStep('images')
+    handleUpdateScriptAndGenerateImages()
+  }
+
+  // --- STEP 2: Images & Scripts Editing Handlers ---
+  const handleEditImageScript = (index: number, newScript: string) => {
+    if (imagesData) {
+      const newScripts = [...imagesData.scripts]
+      newScripts[index] = newScript
+      setImagesData({ ...imagesData, scripts: newScripts })
+    }
+  }
+
+  const handleRegenerateImages = async () => {
+    if (!localContent) return
     setLoading(true)
     setError(null)
+    setIsRegeneratingImages(true)
     try {
-      const response = await previewAudio({
-        speed: audioSpeed,
-        voice: audioVoice,
-        instructions: audioInstructions,
+      const imagesResponse = await generateImages({
+        content: localContent,
+        style: selectedContentStyle,
       })
-      setPreviewAudioUrl(response.url)
+      setImagesData(imagesResponse)
     } catch (err: any) {
-      setError('Failed to preview audio')
+      setError('Failed to regenerate images')
     } finally {
       setLoading(false)
+      setIsRegeneratingImages(false)
     }
   }
 
-  // Handler: Call API flow to generate video.
-  const handleGenerateVideo = async () => {
-    if (!script) return
-    // Update script if content has been edited.
-    if (localContent !== script.content) {
-      await handleUpdateScript()
+  // --- STEP NAVIGATION HANDLERS ---
+  const handleNextStep = () => {
+    if (step === 'script' && script) {
+      // Ngay lập tức chuyển sang bước Images
+      navigateToStep('images')
+
+      // Sau đó bắt đầu quá trình cập nhật script và tạo hình ảnh
+      handleUpdateScriptAndGenerateImages()
+    } else if (step === 'images') {
+      navigateToStep('audio')
+    } else if (step === 'audio') {
+      handleProceedToVideo()
     }
+  }
+
+  const handlePreviousStep = () => {
+    if (step === 'images') {
+      navigateToStep('script')
+    } else if (step === 'audio') {
+      navigateToStep('images')
+    }
+  }
+
+  // --- STEP 3: Audio Configuration Handlers ---
+  const handleProceedToVideo = async () => {
+    navigateToStep('videoGenerating')
+    // Start video generation and show spinner immediately.
+    if (!script || !imagesData) return
+
     setLoading(true)
-    setStep('generating')
+    setError(null)
+
     try {
-      const videoResponse = await generateVideoFlow({ scriptId: script.id })
+      // The backend expects the scripts from ImagesStep - these already contain user edits
+      const videoResponse = await generateVideoFlow({
+        scriptId: script.id,
+        imageUrls: imagesData.image_urls,
+        scripts: imagesData.scripts,
+      })
       setVideoUrl(videoResponse.url)
-      setStep('generated')
+      navigateToStep('videoGenerated')
     } catch (err: any) {
       setError('Failed to generate video')
-      setStep('editing')
+      navigateToStep('audio') // go back to audio step if video generation fails
     } finally {
       setLoading(false)
     }
   }
 
-  // Handler: Reset flow for a new generation.
+  // --- Reset Flow Handler ---
   const handleReset = () => {
     setTitle('')
     setSelectedContentStyle('default')
+    setSelectedLanguage('en')
     setLocalContent('')
+    setImagesData(null)
     setVideoUrl(null)
     setPreviewAudioUrl(null)
-    setStep('initial')
+    setAudioVoice('alloy') // Reset to default voice
+    navigateToStep('script')
     resetScriptState()
   }
 
+  // Determine if Next button should be disabled
+  const isNextDisabled = () => {
+    if (step === 'script') {
+      return !script // Disable if no script exists
+    }
+    return false
+  }
+
   return (
-    <Container maxWidth="md" sx={{ mt: 4 }}>
+    <Container maxWidth="md" sx={{ mt: 4, pb: 4 }}>
       <Typography variant="h4" gutterBottom>
         Generate Video Flow
       </Typography>
 
+      <ProgressTracker currentStep={step} />
+
       {error && (
-        <Typography color="error" variant="body1">
+        <Typography color="error" variant="body1" sx={{ mb: 2 }}>
           {error}
         </Typography>
       )}
 
-      {loading && (
+      {/* {loading && (
         <Box display="flex" justifyContent="center" sx={{ my: 2 }}>
-          <CircularProgress />
+          <LoadingIndicator isLoading={false} size={24} />
         </Box>
-      )}
+      )} */}
 
-      {step === 'initial' && (
-        <Box display="flex" flexDirection="column" gap={2}>
-          <TextField
-            label="Title"
-            variant="outlined"
-            fullWidth
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+      <Paper
+        elevation={3}
+        sx={{
+          p: 3,
+          position: 'relative',
+          overflow: 'hidden',
+          minHeight: '400px',
+        }}
+      >
+        <PageTransition
+          isVisible={step === 'script'}
+          direction={transitionDirection}
+        >
+          <ScriptStep
+            title={title}
+            setTitle={setTitle}
+            selectedContentStyle={selectedContentStyle}
+            setSelectedContentStyle={setSelectedContentStyle}
+            selectedLanguage={selectedLanguage}
+            setSelectedLanguage={setSelectedLanguage}
+            localContent={localContent}
+            setLocalContent={setLocalContent}
+            scriptExists={!!script}
+            onCreateScript={handleCreateScript}
+            onUpdateScript={handleUpdateScript}
+            onProceedToImages={handleProceedToImages}
+            contentStyleOptions={contentStyleOptions}
+            languageOptions={languageOptions}
+            onReset={handleReset}
+            isGeneratingScript={isGeneratingScript}
           />
-          <FormControl fullWidth>
-            <InputLabel id="content-style-label">Content Style</InputLabel>
-            <Select
-              labelId="content-style-label"
-              label="Content Style"
-              value={selectedContentStyle}
-              onChange={(e) => setSelectedContentStyle(e.target.value)}
-            >
-              {contentStyleOptions.map((option) => (
-                <MenuItem key={option} value={option}>
-                  {option.charAt(0).toUpperCase() + option.slice(1)}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl fullWidth>
-            <InputLabel id="language-label">Language</InputLabel>
-            <Select
-              labelId="language-label"
-              label="Language"
-              value={selectedLanguage}
-              onChange={(e) => setSelectedLanguage(e.target.value)}
-            >
-              {languageOptions.map((lang) => (
-                <MenuItem key={lang.value} value={lang.value}>
-                  {lang.label.toUpperCase()}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <Button variant="contained" onClick={handleCreateScript}>
-            Generate Script
-          </Button>
-        </Box>
-      )}
+        </PageTransition>
 
-      {step === 'editing' && script && (
-        <Box display="flex" flexDirection="column" gap={2}>
-          <Typography variant="h6">Edit Script Content</Typography>
-          <TextField
-            label="Script Content"
-            variant="outlined"
-            fullWidth
-            multiline
-            minRows={6}
-            value={localContent}
-            onChange={(e) => setLocalContent(e.target.value)}
+        <PageTransition
+          isVisible={step === 'images'}
+          direction={transitionDirection}
+        >
+          <ImagesStep
+            imagesData={imagesData}
+            onEditImageScript={handleEditImageScript}
+            onRegenerateImages={handleRegenerateImages}
+            onProceedToAudio={() => navigateToStep('audio')}
+            isRegeneratingImages={isRegeneratingImages}
           />
+        </PageTransition>
 
-          {/* Audio Configuration Section */}
-          <Typography variant="h6">Audio Configuration</Typography>
-          <Box display="flex" flexDirection="column" gap={2}>
-            <FormControl fullWidth>
-              <InputLabel id="audio-speed-label">Audio Speed</InputLabel>
-              <Select
-                labelId="audio-speed-label"
-                label="Audio Speed"
-                value={audioSpeed}
-                onChange={(e) => setAudioSpeed(Number(e.target.value))}
-              >
-                {audioSpeedOptions.map((speed) => (
-                  <MenuItem key={speed} value={speed}>
-                    {speed}x
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+        <PageTransition
+          isVisible={step === 'audio'}
+          direction={transitionDirection}
+        >
+          <AudioPreviewConfig
+            audioSpeed={audioSpeed}
+            setAudioSpeed={setAudioSpeed}
+            audioVoice={audioVoice}
+            setAudioVoice={setAudioVoice}
+            audioInstructions={audioInstructions}
+            setAudioInstructions={setAudioInstructions}
+            availableVoices={availableVoices}
+            onProceedToVideo={handleProceedToVideo}
+            audioSpeedOptions={audioSpeedOptions}
+            audioInstructionsOptions={audioInstructionsOptions}
+            previewAudioUrl={previewAudioUrl}
+            isLoadingPreview={isLoadingPreview}
+            onVoiceChange={handleVoiceChange}
+          />
+        </PageTransition>
 
-            <FormControl fullWidth>
-              <InputLabel id="audio-voice-label">Audio Voice</InputLabel>
-              <Select
-                labelId="audio-voice-label"
-                label="Audio Voice"
-                value={audioVoice}
-                onChange={(e) => setAudioVoice(e.target.value)}
-              >
-                {audioVoiceOptions.map((voice) => (
-                  <MenuItem key={voice} value={voice}>
-                    {voice}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <FormControl fullWidth>
-              <InputLabel id="audio-instructions-label">
-                Audio Instructions
-              </InputLabel>
-              <Select
-                labelId="audio-instructions-label"
-                label="Audio Instructions"
-                value={audioInstructions}
-                onChange={(e) => setAudioInstructions(e.target.value)}
-              >
-                {audioInstructionsOptions.map((instr) => (
-                  <MenuItem key={instr} value={instr}>
-                    {instr}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <Button variant="outlined" onClick={handlePreviewAudio}>
-              Preview Audio
-            </Button>
-
-            {previewAudioUrl && (
-              <Box>
-                <Typography variant="body2">Audio Preview:</Typography>
-                <audio controls src={previewAudioUrl} />
-              </Box>
-            )}
+        <PageTransition
+          isVisible={step === 'videoGenerating'}
+          direction={transitionDirection}
+        >
+          <Box
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            gap={2}
+            py={8}
+          >
+            <Typography variant="h6">
+              Generating video, please wait...
+            </Typography>
+            <LoadingIndicator
+              isLoading={true}
+              size={60}
+              message="This may take a few minutes"
+            />
           </Box>
+        </PageTransition>
 
-          <Box display="flex" gap={2}>
-            <Button variant="outlined" onClick={handleUpdateScript}>
-              Update Script
-            </Button>
-            <Button
-              variant="outlined"
-              color="error"
-              onClick={handleDeleteScript}
-            >
-              Delete Script
-            </Button>
-            <Button variant="contained" onClick={handleGenerateVideo}>
-              Generate Video
-            </Button>
-          </Box>
-        </Box>
-      )}
+        <PageTransition
+          isVisible={step === 'videoGenerated'}
+          direction={transitionDirection}
+        >
+          {videoUrl && (
+            <VideoPreviewStep videoUrl={videoUrl} onReset={handleReset} />
+          )}
+        </PageTransition>
+      </Paper>
 
-      {step === 'generated' && videoUrl && (
-        <Box display="flex" flexDirection="column" gap={2} alignItems="center">
-          <Typography variant="h6">Video Generated</Typography>
-          <video controls width="600" src={videoUrl} />
-          <Button variant="outlined" onClick={handleReset}>
-            Generate Another Video
-          </Button>
-        </Box>
-      )}
+      <StepNavigation
+        currentStep={step}
+        onPrevious={handlePreviousStep}
+        onNext={handleNextStep}
+        disableNext={isNextDisabled()}
+        nextLabel={step === 'audio' ? 'Generate Video' : 'Next Step'}
+      />
     </Container>
   )
 }

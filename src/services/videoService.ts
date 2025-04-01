@@ -34,6 +34,7 @@ export const createVideo = async (data: {
   imageUrls: string[]
   audioUrl: string
   scriptId: string
+  scripts: string[]
   transitionDuration?: number
 }): Promise<Video> => {
   const response = await api.post('/videos', data)

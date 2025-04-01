@@ -1,0 +1,12 @@
+{
+  "appName": "Vision Forge",
+  "navigation": {
+    "home": "Home",
+    "profile": "Profile",
+    "settings": "Settings"
+  },
+  "languages": {
+    "en": "English",
+    "vi": "Vietnamese"
+  }
+}

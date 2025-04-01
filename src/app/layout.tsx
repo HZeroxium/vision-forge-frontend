@@ -5,7 +5,9 @@ import '@styles/globals.css'
 import React from 'react'
 import Providers from '@components/providers/Providers'
 import { NextI18nextProvider } from '@/components/providers/NextI18nextProvider'
-import TopNav from '@/components/navigation/TopNav'
+import ClientTopNav from '@/components/navigation/ClientTopNav'
+import { Toaster } from 'react-hot-toast'
+
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
@@ -33,10 +35,11 @@ export default function RootLayout({
       >
         <NextI18nextProvider>
           <Providers>
-            <TopNav />
+            <ClientTopNav />
             {children}
           </Providers>
         </NextI18nextProvider>
+        <Toaster position="top-right" />
       </body>
     </html>
   )
