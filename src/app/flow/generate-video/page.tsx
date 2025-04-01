@@ -9,23 +9,16 @@ import VideoPreviewStep from '@components/flow/VideoPreviewStep'
 import ProgressTracker from '@components/flow/ProgressTracker'
 import StepNavigation from '@components/flow/StepNavigation'
 import PageTransition from '@components/flow/PageTransition'
-import LoadingIndicator from '@components/common/LoadingIndicator'
 import { useScripts } from '@hooks/useScripts'
 import {
   generateImages,
-  generateVideoFlow,
   startVideoGenerationJob,
   getPreviewVoiceUrl,
-  getVideoById,
   AudioPreview,
   getJobStatus,
   getVideoByScriptId,
 } from '@services/flowService'
-import {
-  subscribeToJobProgress,
-  pollJobProgress,
-  JobProgress,
-} from '@utils/sse'
+import { subscribeToJobProgress, JobProgress } from '@utils/sse'
 
 /**
  * Define the steps of the flow.
