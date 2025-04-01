@@ -93,6 +93,10 @@ export default function GenerateVideoFlowPage() {
   const [jobProgress, setJobProgress] = useState<JobProgress | null>(null)
   const sseCleanupRef = useRef<(() => void) | null>(null)
 
+  // Add a new state to track initial image generation
+  const [isGeneratingInitialImages, setIsGeneratingInitialImages] =
+    useState(false)
+
   // Cleanup SSE connection when component unmounts
   useEffect(() => {
     return () => {
@@ -228,6 +232,7 @@ export default function GenerateVideoFlowPage() {
     // Chỉ tạo hình ảnh nếu chưa có
     if (!imagesData) {
       setIsRegeneratingImages(true) // Hiển thị trạng thái loading trong ImagesStep
+      setIsGeneratingInitialImages(true) // Set the initial generation flag
       setError(null)
 
       try {
@@ -241,6 +246,7 @@ export default function GenerateVideoFlowPage() {
         console.error('Error generating images:', err)
       } finally {
         setIsRegeneratingImages(false)
+        setIsGeneratingInitialImages(false) // Clear the initial generation flag
       }
     }
   }
@@ -287,7 +293,12 @@ export default function GenerateVideoFlowPage() {
 
       // Sau đó bắt đầu quá trình cập nhật script và tạo hình ảnh
       handleUpdateScriptAndGenerateImages()
-    } else if (step === 'images') {
+    } else if (
+      step === 'images' &&
+      !isGeneratingInitialImages &&
+      !isRegeneratingImages
+    ) {
+      // Only proceed if images are not being generated
       navigateToStep('audio')
     } else if (step === 'audio') {
       handleProceedToVideo()
@@ -501,6 +512,7 @@ export default function GenerateVideoFlowPage() {
             onRegenerateImages={handleRegenerateImages}
             onProceedToAudio={() => navigateToStep('audio')}
             isRegeneratingImages={isRegeneratingImages}
+            isGeneratingInitialImages={isGeneratingInitialImages} // Pass the new prop
           />
         </PageTransition>
 
@@ -544,6 +556,7 @@ export default function GenerateVideoFlowPage() {
         onNext={handleNextStep}
         disableNext={isNextDisabled()}
         nextLabel={step === 'audio' ? 'Generate Video' : 'Next Step'}
+        isGeneratingImages={isRegeneratingImages || isGeneratingInitialImages} // Pass combined state
       />
     </Container>
   )

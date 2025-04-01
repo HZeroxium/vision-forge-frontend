@@ -39,6 +39,7 @@ interface ImagesStepProps {
   onRegenerateImages: () => Promise<void>
   onProceedToAudio: () => void
   isRegeneratingImages?: boolean
+  isGeneratingInitialImages?: boolean // Add this new prop
 }
 
 const ImagesStep: React.FC<ImagesStepProps> = ({
@@ -47,6 +48,7 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
   onRegenerateImages,
   onProceedToAudio,
   isRegeneratingImages = false,
+  isGeneratingInitialImages = false, // Add the new prop with default value
 }) => {
   const theme = useTheme()
 
@@ -56,25 +58,26 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [loadingImages, setLoadingImages] = useState<boolean[]>([])
+  const [showIncompleteAlert, setShowIncompleteAlert] = useState(false)
 
-  // QUAN TRỌNG: useEffect PHẢI được khai báo trước bất kỳ câu lệnh return nào
   useEffect(() => {
     if (imagesData) {
-      // Trạng thái scripts
+      // Initialize editedScripts only when imagesData changes, not on index change
       setEditedScripts(Array(imagesData.scripts.length).fill(false))
-
-      // Reset currentImageIndex nếu vượt quá số lượng ảnh mới
-      if (currentImageIndex >= imagesData.image_urls.length) {
-        setCurrentImageIndex(0)
-      }
-
-      // Reset trạng thái loading của tất cả ảnh
+      // Reset loading state of all images
       setLoadingImages(Array(imagesData.image_urls.length).fill(false))
     }
-  }, [imagesData, currentImageIndex]) // Thêm currentImageIndex vào dependencies
+  }, [imagesData]) // Remove currentImageIndex from dependencies
 
-  // BÂY GIỜ đặt câu lệnh return
-  if (!imagesData) {
+  // Separate useEffect for handling index bounds
+  useEffect(() => {
+    if (imagesData && currentImageIndex >= imagesData.image_urls.length) {
+      setCurrentImageIndex(0)
+    }
+  }, [imagesData, currentImageIndex])
+
+  if (!imagesData || isGeneratingInitialImages) {
+    // Update condition to check for initial generation too
     return (
       <Box
         display="flex"
@@ -86,7 +89,11 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
       >
         <LoadingIndicator
           isLoading={true}
-          message="Generating images from your script. This may take a moment."
+          message={
+            isGeneratingInitialImages
+              ? 'Generating images from your script. This may take a moment.'
+              : 'Loading images...'
+          }
           size={60}
         />
       </Box>
@@ -135,6 +142,14 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
     // Set all images to loading state
     setLoadingImages(Array(imagesData.image_urls.length).fill(true))
     await onRegenerateImages()
+  }
+
+  const handleProceedClick = () => {
+    if (isRegeneratingImages || isGeneratingInitialImages) {
+      setShowIncompleteAlert(true)
+    } else {
+      onProceedToAudio()
+    }
   }
 
   return (
@@ -440,8 +455,8 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
           variant="contained"
           color="primary"
           endIcon={<NavigateNextIcon />}
-          onClick={onProceedToAudio}
-          disabled={isRegeneratingImages}
+          onClick={handleProceedClick}
+          disabled={isRegeneratingImages || isGeneratingInitialImages}
           sx={{
             ml: { xs: 0, sm: 'auto' },
             borderRadius: 2,
@@ -470,6 +485,17 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
           sx={{ width: '100%' }}
         >
           Your script changes have been saved successfully!
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={showIncompleteAlert}
+        autoHideDuration={4000}
+        onClose={() => setShowIncompleteAlert(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="info" onClose={() => setShowIncompleteAlert(false)}>
+          Please wait for image generation to complete before proceeding.
         </Alert>
       </Snackbar>
     </Box>
