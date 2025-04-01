@@ -1,6 +1,6 @@
 // src/components/flow/ImagesStep.tsx
 'use client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Box, Typography, Chip, Divider } from '@mui/material'
 import LoadingIndicator from '../common/LoadingIndicator'
 
@@ -18,6 +18,7 @@ interface ImagesStepProps {
   onProceedToAudio: () => void
   isRegeneratingImages?: boolean
   isGeneratingInitialImages?: boolean
+  onSaveAllScripts?: (scripts: string[]) => Promise<boolean>
 }
 
 const ImagesStep: React.FC<ImagesStepProps> = ({
@@ -27,26 +28,50 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
   onProceedToAudio,
   isRegeneratingImages = false,
   isGeneratingInitialImages = false,
+  onSaveAllScripts,
 }) => {
-  const [editedScripts, setEditedScripts] = useState<boolean[]>([])
+  // Store the original scripts to detect changes
+  const [originalScripts, setOriginalScripts] = useState<string[]>([])
+  const [currentScripts, setCurrentScripts] = useState<string[]>([])
+
+  // Removed editedScripts state and use a computed value instead
   const [showSaveNotification, setShowSaveNotification] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [loadingImages, setLoadingImages] = useState<boolean[]>([])
   const [showIncompleteAlert, setShowIncompleteAlert] = useState(false)
 
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  // Initialize state when imagesData changes (like when first loading or regenerating)
   useEffect(() => {
     if (imagesData) {
-      setEditedScripts(Array(imagesData.scripts.length).fill(false))
+      // Only reset scripts when imagesData is first loaded or regenerated
+      if (
+        originalScripts.length === 0 ||
+        imagesData.scripts.length !== originalScripts.length
+      ) {
+        setOriginalScripts([...imagesData.scripts])
+        setCurrentScripts([...imagesData.scripts])
+      }
       setLoadingImages(Array(imagesData.image_urls.length).fill(false))
     }
-  }, [imagesData])
+  }, [imagesData, originalScripts.length])
 
   useEffect(() => {
     if (imagesData && currentImageIndex >= imagesData.image_urls.length) {
       setCurrentImageIndex(0)
     }
   }, [imagesData, currentImageIndex])
+
+  // Compute which scripts have been edited by comparing original to current
+  const editedScripts = currentScripts.map(
+    (script, index) => originalScripts[index] !== script
+  )
+
+  // Determine if any scripts have been edited
+  const hasEditedScripts = editedScripts.some((edited) => edited)
 
   if (!imagesData || isGeneratingInitialImages) {
     return (
@@ -72,15 +97,54 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
   }
 
   const handleScriptChange = (index: number, newScript: string) => {
+    // Call parent handler to update script in parent component
     onEditImageScript(index, newScript)
-    const newEditedScripts = [...editedScripts]
-    newEditedScripts[index] = true
-    setEditedScripts(newEditedScripts)
+
+    // Update our local state to track current scripts
+    const updatedScripts = [...currentScripts]
+    updatedScripts[index] = newScript
+    setCurrentScripts(updatedScripts)
+
+    // Clear any previous save errors
+    if (saveError) {
+      setSaveError(null)
+    }
   }
 
-  const handleSaveAllChanges = () => {
-    setShowSaveNotification(true)
-    setEditedScripts(Array(imagesData.scripts.length).fill(false))
+  const handleSaveAllChanges = async () => {
+    // Don't try to save if no changes or already saving
+    if (!hasEditedScripts || isSaving) {
+      return
+    }
+
+    setIsSaving(true)
+    setSaveError(null)
+
+    try {
+      // If the parent component provided a save function, use it
+      if (onSaveAllScripts) {
+        const success = await onSaveAllScripts(currentScripts)
+
+        if (success) {
+          // After successful save, update original scripts to match current
+          setOriginalScripts([...currentScripts])
+          setShowSaveNotification(true)
+        } else {
+          setSaveError('Failed to save script changes')
+        }
+      } else {
+        // No save function provided, just update original scripts
+        setOriginalScripts([...currentScripts])
+        setShowSaveNotification(true)
+      }
+    } catch (error) {
+      console.error('Error saving scripts:', error)
+      setSaveError(
+        typeof error === 'string' ? error : 'Failed to save script changes'
+      )
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handlePrevImage = () => {
@@ -115,6 +179,11 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
   }
 
   const handleProceedClick = () => {
+    // If there are unsaved changes, save them before proceeding
+    if (hasEditedScripts) {
+      handleSaveAllChanges()
+    }
+
     if (isRegeneratingImages || isGeneratingInitialImages) {
       setShowIncompleteAlert(true)
     } else {
@@ -155,7 +224,7 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
       >
         <ScriptEditor
           currentImageIndex={currentImageIndex}
-          script={imagesData.scripts[currentImageIndex]}
+          script={currentScripts[currentImageIndex] || ''}
           isEdited={editedScripts[currentImageIndex]}
           isFullscreen={isFullscreen}
           isRegeneratingImages={isRegeneratingImages}
@@ -172,9 +241,10 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
       />
 
       <ActionButtons
-        hasEditedScripts={editedScripts.some((edited) => edited)}
+        hasEditedScripts={hasEditedScripts}
         isRegeneratingImages={isRegeneratingImages}
         isGeneratingInitialImages={isGeneratingInitialImages}
+        isSaving={isSaving}
         onRegenerateImages={handleRegenerateImagesClick}
         onSaveAllChanges={handleSaveAllChanges}
         onProceedToAudio={handleProceedClick}
@@ -183,8 +253,10 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
       <Notifications
         showSaveNotification={showSaveNotification}
         showIncompleteAlert={showIncompleteAlert}
+        saveError={saveError}
         onCloseSaveNotification={() => setShowSaveNotification(false)}
         onCloseIncompleteAlert={() => setShowIncompleteAlert(false)}
+        onCloseSaveError={() => setSaveError(null)}
       />
     </Box>
   )

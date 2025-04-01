@@ -59,6 +59,9 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({
           mb: 2,
           '& .MuiOutlinedInput-root': {
             borderColor: isEdited ? theme.palette.primary.main : 'inherit',
+            border: isEdited
+              ? `1px solid ${theme.palette.primary.main}`
+              : undefined,
             transition: 'all 0.3s ease',
             '&:hover': {
               borderColor: theme.palette.primary.light,
@@ -78,7 +81,7 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({
             color="primary.main"
             fontWeight="medium"
           >
-            Changes will be saved automatically
+            Changes need to be saved
           </Typography>
         </Box>
       )}

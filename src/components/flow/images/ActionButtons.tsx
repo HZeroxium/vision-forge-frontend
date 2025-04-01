@@ -1,7 +1,7 @@
 // src/components/flow/images/ActionButtons.tsx
 'use client'
 import React from 'react'
-import { Box, Button, Tooltip } from '@mui/material'
+import { Box, Button, Tooltip, CircularProgress, Badge } from '@mui/material'
 import SaveIcon from '@mui/icons-material/Save'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import NavigateNextIcon from '@mui/icons-material/NavigateNext'
@@ -10,6 +10,7 @@ interface ActionButtonsProps {
   hasEditedScripts: boolean
   isRegeneratingImages: boolean
   isGeneratingInitialImages: boolean
+  isSaving?: boolean // Add new prop for saving state
   onRegenerateImages: () => void
   onSaveAllChanges: () => void
   onProceedToAudio: () => void
@@ -19,6 +20,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   hasEditedScripts,
   isRegeneratingImages,
   isGeneratingInitialImages,
+  isSaving = false,
   onRegenerateImages,
   onSaveAllChanges,
   onProceedToAudio,
@@ -39,47 +41,55 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           variant="outlined"
           startIcon={<RefreshIcon />}
           onClick={onRegenerateImages}
-          disabled={isRegeneratingImages}
+          disabled={isRegeneratingImages || isSaving}
           sx={buttonStyle}
         >
           {isRegeneratingImages ? 'Regenerating...' : 'Regenerate Images'}
         </Button>
       </Tooltip>
 
-      <Tooltip title="Save all your script edits">
-        {!hasEditedScripts || isRegeneratingImages ? (
-          <span>
+      <Tooltip
+        title={
+          !hasEditedScripts
+            ? 'No changes to save'
+            : 'Save all your script edits'
+        }
+      >
+        <span>
+          {' '}
+          <Badge
+            variant="dot"
+            color="error"
+            invisible={!hasEditedScripts}
+            sx={{
+              '& .MuiBadge-badge': {
+                right: 6,
+                top: 6,
+              },
+            }}
+          >
             <Button
-              variant="outlined"
+              variant={hasEditedScripts ? 'contained' : 'outlined'}
               color="primary"
-              startIcon={<SaveIcon />}
+              startIcon={
+                isSaving ? <CircularProgress size={20} /> : <SaveIcon />
+              }
               onClick={onSaveAllChanges}
-              disabled={true}
+              disabled={!hasEditedScripts || isRegeneratingImages || isSaving}
               sx={buttonStyle}
             >
-              Save All Changes
+              {isSaving ? 'Saving...' : 'Save All Changes'}
             </Button>
-          </span>
-        ) : (
-          <Button
-            variant="outlined"
-            color="primary"
-            startIcon={<SaveIcon />}
-            onClick={onSaveAllChanges}
-            disabled={false}
-            sx={buttonStyle}
-          >
-            Save All Changes
-          </Button>
-        )}
+          </Badge>
+        </span>
       </Tooltip>
 
-      <Button
+      {/* <Button
         variant="contained"
         color="primary"
         endIcon={<NavigateNextIcon />}
         onClick={onProceedToAudio}
-        disabled={isRegeneratingImages || isGeneratingInitialImages}
+        disabled={isRegeneratingImages || isGeneratingInitialImages || isSaving}
         sx={{
           ml: { xs: 0, sm: 'auto' },
           borderRadius: 2,
@@ -91,7 +101,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
         }}
       >
         Continue to Audio
-      </Button>
+      </Button> */}
     </Box>
   )
 }
