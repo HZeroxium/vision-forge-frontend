@@ -32,7 +32,7 @@ import Link from 'next/link'
 
 // Animate components with framer-motion
 const MotionBox = motion(Box)
-const MotionTypography = motion(Typography) as typeof Typography
+const MotionTypography = motion(Typography)
 const MotionButton = motion(Button)
 const MotionGrid = motion(Grid)
 const MotionCard = motion(Card)

@@ -60,7 +60,11 @@ const MotionTypography = motion(Typography)
 const MotionContainer = motion(Container)
 const MotionButton = motion(Button)
 
-function HideOnScroll(props) {
+interface HideOnScrollProps {
+  children: React.ReactElement
+}
+
+function HideOnScroll(props: HideOnScrollProps) {
   const { children } = props
   const trigger = useScrollTrigger()
 

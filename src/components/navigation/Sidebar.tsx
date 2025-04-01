@@ -286,7 +286,7 @@ const Sidebar = () => {
             }}
           >
             <Avatar
-              src={user.avatar || undefined}
+              src="/images/user-avatar.png" // Placeholder for user avatar
               alt={user.name || 'User'}
               sx={{
                 width: 40,
