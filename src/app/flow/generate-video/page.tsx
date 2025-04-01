@@ -18,6 +18,7 @@ import {
   getPreviewVoiceUrl,
   getVideoById,
   AudioPreview,
+  getJobStatus,
 } from '@services/flowService'
 import {
   subscribeToJobProgress,
@@ -96,6 +97,7 @@ export default function GenerateVideoFlowPage() {
     return () => {
       if (sseCleanupRef.current) {
         sseCleanupRef.current()
+        sseCleanupRef.current = null
       }
     }
   }, [])
@@ -302,86 +304,96 @@ export default function GenerateVideoFlowPage() {
   // --- STEP 3: Audio Configuration Handlers ---
   const handleProceedToVideo = async () => {
     navigateToStep('videoGenerating')
-    // Start video generation and show spinner immediately.
     if (!script || !imagesData) return
 
     setLoading(true)
     setError(null)
     setJobProgress(null)
+    setVideoUrl(null) // Reset video URL when starting a new generation
 
     try {
-      // Use the job-based approach instead of the synchronous one
+      // Start the video generation job
       const jobResponse = await startVideoGenerationJob({
         scriptId: script.id,
         imageUrls: imagesData.image_urls,
         scripts: imagesData.scripts,
       })
 
-      // Set the current job ID to track
       setCurrentJobId(jobResponse.jobId)
 
-      // Start listening for SSE updates on this job
+      // Set up a reference to track if the job complete handler has run
+      // This prevents duplicate processing when the job completes
+      const jobCompletionRef = { completed: false }
+
       const cleanup = subscribeToJobProgress(
         jobResponse.jobId,
         (progress) => {
+          console.log(
+            `Job progress update: ${progress.state} - ${progress.progress}%`
+          )
           setJobProgress(progress)
 
-          // When the job is complete, update the videoUrl
-          if (progress.state === 'completed') {
-            fetchVideoUrl(jobResponse.scriptId)
+          // Only process completion once and only if we haven't already
+          if (progress.state === 'completed' && !jobCompletionRef.completed) {
+            console.log('Job completed, fetching video details')
+            jobCompletionRef.completed = true
+
+            // Get the video URL from the completed job
+            fetchCompletedVideo(jobResponse.jobId)
+              .then(() => {
+                navigateToStep('videoGenerated')
+              })
+              .catch((err) => {
+                console.error('Error fetching completed video:', err)
+                setError('Failed to retrieve the generated video')
+              })
           } else if (progress.state === 'failed') {
-            setError(
-              'Video generation failed: ' + (progress.error || 'Unknown error')
-            )
-            navigateToStep('videoGenerated')
+            setError(progress.error || 'Video generation failed')
+            navigateToStep('audio')
           }
         },
         (error) => {
           console.error('SSE error:', error)
-          setError(
-            'Failed to track video generation progress. Using fallback...'
-          )
-
-          // Fall back to polling if SSE fails
-          sseCleanupRef.current = pollJobProgress(
-            jobResponse.jobId,
-            setJobProgress,
-            (pollError) => {
-              setError('Video generation tracking failed: ' + pollError)
-              navigateToStep('audio')
-            }
-          )
+          setError('Connection error during video generation')
         }
       )
 
       sseCleanupRef.current = cleanup
-
-      // Move to the video generated step - progress will be shown there
-      navigateToStep('videoGenerated')
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to start video generation:', err)
       setError('Failed to start video generation')
-      navigateToStep('audio') // go back to audio step if video generation fails
+      navigateToStep('audio')
     } finally {
       setLoading(false)
     }
   }
 
-  // Function to fetch the final video URL when job is complete
-  const fetchVideoUrl = async (scriptId: string) => {
+  // Function to fetch the final video from a completed job
+  const fetchCompletedVideo = async (jobId: string) => {
+    if (!script || !imagesData) return
+
     try {
-      // In a real implementation, the backend should return the videoId from the job
-      // For now, we'll use the script ID to find the video
+      // Get job status to get the video reference
+      const jobStatus = await getJobStatus(jobId)
+
+      if (jobStatus.state !== 'completed') {
+        throw new Error('Job is not completed')
+      }
+
+      // Get video details from the job result
       const videoResponse = await generateVideoFlow({
-        scriptId,
-        imageUrls: imagesData!.image_urls,
-        scripts: imagesData!.scripts,
+        scriptId: script.id,
+        imageUrls: imagesData.image_urls,
+        scripts: imagesData.scripts,
       })
 
+      console.log('Setting video URL:', videoResponse.url)
       setVideoUrl(videoResponse.url)
+      return videoResponse
     } catch (err) {
-      console.error('Failed to get final video URL:', err)
-      setError('Failed to retrieve the generated video')
+      console.error('Failed to fetch video for completed job:', err)
+      setError('Failed to retrieve the completed video')
+      throw err
     }
   }
 

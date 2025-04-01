@@ -29,8 +29,12 @@ export const subscribeToJobProgress = (
     return () => {}
   }
 
+  console.log(`Opening SSE connection for job ${jobId}`)
+
   // Create EventSource connection to the backend
-  const eventSource = new EventSource(`api/flow/job/${jobId}/stream`)
+  const eventSource = new EventSource(
+    `http://localhost:5000/api/flow/job/${jobId}/stream`
+  )
 
   // Handle incoming messages
   eventSource.onmessage = (event) => {
@@ -40,7 +44,13 @@ export const subscribeToJobProgress = (
 
       // Close the connection if the job is completed or failed
       if (data.state === 'completed' || data.state === 'failed') {
-        eventSource.close()
+        console.log(
+          `Job ${data.jobId} ${data.state} with progress ${data.progress}%, closing SSE connection`
+        )
+        setTimeout(() => {
+          eventSource.close()
+          console.log(`SSE connection closed for job ${jobId}`)
+        }, 500) // Short delay to ensure any last messages are processed
       }
     } catch (error) {
       console.error('Error parsing SSE data:', error)
@@ -50,14 +60,17 @@ export const subscribeToJobProgress = (
 
   // Handle connection errors
   eventSource.onerror = (error) => {
-    console.error('SSE connection error:', error)
+    console.error(`SSE connection error for job ${jobId}:`, error)
     if (onError) onError(error)
     eventSource.close()
+    console.log(`SSE connection closed for job ${jobId} due to error`)
   }
 
   // Return a function to close the connection
   return () => {
+    console.log(`Manually closing SSE connection for job ${jobId}`)
     eventSource.close()
+    console.log(`SSE connection closed for job ${jobId}`)
   }
 }
 
@@ -81,7 +94,9 @@ export const pollJobProgress = (
     if (!isActive) return
 
     try {
-      const response = await fetch(`api/flow/job/${jobId}/status`)
+      const response = await fetch(
+        `http://localhost:5000/api/flow/job/${jobId}/status`
+      )
       if (!response.ok) throw new Error('Failed to fetch job status')
 
       const data = await response.json()
