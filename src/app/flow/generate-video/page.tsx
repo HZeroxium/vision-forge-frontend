@@ -1,6 +1,6 @@
 // src/app/flow/generate-video/page.tsx
 'use client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Container, Typography, Box, Paper } from '@mui/material'
 import ScriptStep from '@components/flow/ScriptStep'
 import ImagesStep from '@components/flow/ImagesStep'
@@ -14,9 +14,16 @@ import { useScripts } from '@hooks/useScripts'
 import {
   generateImages,
   generateVideoFlow,
+  startVideoGenerationJob,
   getPreviewVoiceUrl,
+  getVideoById,
   AudioPreview,
 } from '@services/flowService'
+import {
+  subscribeToJobProgress,
+  pollJobProgress,
+  JobProgress,
+} from '@utils/sse'
 
 /**
  * Define the steps of the flow.
@@ -78,6 +85,20 @@ export default function GenerateVideoFlowPage() {
   // Add isGeneratingScript state
   const [isGeneratingScript, setIsGeneratingScript] = useState(false)
   const [isRegeneratingImages, setIsRegeneratingImages] = useState(false)
+
+  // Add new state for job tracking
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null)
+  const [jobProgress, setJobProgress] = useState<JobProgress | null>(null)
+  const sseCleanupRef = useRef<(() => void) | null>(null)
+
+  // Cleanup SSE connection when component unmounts
+  useEffect(() => {
+    return () => {
+      if (sseCleanupRef.current) {
+        sseCleanupRef.current()
+      }
+    }
+  }, [])
 
   // Dropdown options
   const contentStyleOptions = ['default', 'child', 'professional', 'in-depth']
@@ -286,26 +307,92 @@ export default function GenerateVideoFlowPage() {
 
     setLoading(true)
     setError(null)
+    setJobProgress(null)
 
     try {
-      // The backend expects the scripts from ImagesStep - these already contain user edits
-      const videoResponse = await generateVideoFlow({
+      // Use the job-based approach instead of the synchronous one
+      const jobResponse = await startVideoGenerationJob({
         scriptId: script.id,
         imageUrls: imagesData.image_urls,
         scripts: imagesData.scripts,
       })
-      setVideoUrl(videoResponse.url)
+
+      // Set the current job ID to track
+      setCurrentJobId(jobResponse.jobId)
+
+      // Start listening for SSE updates on this job
+      const cleanup = subscribeToJobProgress(
+        jobResponse.jobId,
+        (progress) => {
+          setJobProgress(progress)
+
+          // When the job is complete, update the videoUrl
+          if (progress.state === 'completed') {
+            fetchVideoUrl(jobResponse.scriptId)
+          } else if (progress.state === 'failed') {
+            setError(
+              'Video generation failed: ' + (progress.error || 'Unknown error')
+            )
+            navigateToStep('videoGenerated')
+          }
+        },
+        (error) => {
+          console.error('SSE error:', error)
+          setError(
+            'Failed to track video generation progress. Using fallback...'
+          )
+
+          // Fall back to polling if SSE fails
+          sseCleanupRef.current = pollJobProgress(
+            jobResponse.jobId,
+            setJobProgress,
+            (pollError) => {
+              setError('Video generation tracking failed: ' + pollError)
+              navigateToStep('audio')
+            }
+          )
+        }
+      )
+
+      sseCleanupRef.current = cleanup
+
+      // Move to the video generated step - progress will be shown there
       navigateToStep('videoGenerated')
     } catch (err: any) {
-      setError('Failed to generate video')
+      console.error('Failed to start video generation:', err)
+      setError('Failed to start video generation')
       navigateToStep('audio') // go back to audio step if video generation fails
     } finally {
       setLoading(false)
     }
   }
 
+  // Function to fetch the final video URL when job is complete
+  const fetchVideoUrl = async (scriptId: string) => {
+    try {
+      // In a real implementation, the backend should return the videoId from the job
+      // For now, we'll use the script ID to find the video
+      const videoResponse = await generateVideoFlow({
+        scriptId,
+        imageUrls: imagesData!.image_urls,
+        scripts: imagesData!.scripts,
+      })
+
+      setVideoUrl(videoResponse.url)
+    } catch (err) {
+      console.error('Failed to get final video URL:', err)
+      setError('Failed to retrieve the generated video')
+    }
+  }
+
   // --- Reset Flow Handler ---
   const handleReset = () => {
+    // Clean up any existing SSE connection
+    if (sseCleanupRef.current) {
+      sseCleanupRef.current()
+      sseCleanupRef.current = null
+    }
+
     setTitle('')
     setSelectedContentStyle('default')
     setSelectedLanguage('en')
@@ -316,6 +403,8 @@ export default function GenerateVideoFlowPage() {
     setAudioVoice('alloy') // Reset to default voice
     navigateToStep('script')
     resetScriptState()
+    setCurrentJobId(null)
+    setJobProgress(null)
   }
 
   // Determine if Next button should be disabled
@@ -414,34 +503,15 @@ export default function GenerateVideoFlowPage() {
         </PageTransition>
 
         <PageTransition
-          isVisible={step === 'videoGenerating'}
+          isVisible={step === 'videoGenerating' || step === 'videoGenerated'}
           direction={transitionDirection}
         >
-          <Box
-            display="flex"
-            flexDirection="column"
-            alignItems="center"
-            gap={2}
-            py={8}
-          >
-            <Typography variant="h6">
-              Generating video, please wait...
-            </Typography>
-            <LoadingIndicator
-              isLoading={true}
-              size={60}
-              message="This may take a few minutes"
-            />
-          </Box>
-        </PageTransition>
-
-        <PageTransition
-          isVisible={step === 'videoGenerated'}
-          direction={transitionDirection}
-        >
-          {videoUrl && (
-            <VideoPreviewStep videoUrl={videoUrl} onReset={handleReset} />
-          )}
+          <VideoPreviewStep
+            videoUrl={videoUrl}
+            onReset={handleReset}
+            jobProgress={jobProgress}
+            isGenerating={step === 'videoGenerating'}
+          />
         </PageTransition>
       </Paper>
 
