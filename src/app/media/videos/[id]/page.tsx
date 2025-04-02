@@ -380,7 +380,7 @@ export default function VideoDetailPage() {
         {video && (
           <Grid container spacing={3}>
             {/* Main Player Section */}
-            <Grid xs={12} md={8}>
+            <Grid size={{ xs: 12 }}>
               <MotionPaper
                 variants={fadeIn}
                 elevation={2}
@@ -684,7 +684,7 @@ export default function VideoDetailPage() {
             </Grid>
 
             {/* Metadata Section */}
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid size={{ xs: 12 }}>
               <MotionPaper
                 variants={fadeIn}
                 elevation={2}
