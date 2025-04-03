@@ -92,7 +92,10 @@ export default function VideosPage() {
           />
 
           <Grid container alignItems="center" spacing={3}>
-            <Grid xs={12} md={7} sx={{ position: 'relative', zIndex: 1 }}>
+            <Grid
+              size={{ xs: 12, md: 7 }}
+              sx={{ position: 'relative', zIndex: 1 }}
+            >
               <MotionBox
                 sx={{ display: 'flex', alignItems: 'center', mb: 2 }}
                 initial={{ x: -30, opacity: 0 }}
@@ -178,8 +181,7 @@ export default function VideosPage() {
             </Grid>
 
             <Grid
-              xs={12}
-              md={5}
+              size={{ xs: 12, md: 5 }}
               sx={{
                 display: { xs: 'none', md: 'flex' },
                 justifyContent: 'center',
@@ -306,7 +308,7 @@ export default function VideosPage() {
                 desc: 'Create stunning videos with our AI technology',
               },
             ].map((feature, i) => (
-              <Grid xs={12} md={4} key={i}>
+              <Grid size={{ xs: 12, md: 4 }} key={i}>
                 <MotionPaper
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
