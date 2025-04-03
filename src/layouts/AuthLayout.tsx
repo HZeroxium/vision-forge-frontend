@@ -1,42 +1,290 @@
-// src/layouts/AuthLayout.tsx
 'use client'
 import React from 'react'
 import Image from 'next/image'
-import { Card, CardContent } from '@mui/material'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  useTheme,
+  IconButton,
+  Tooltip,
+  useMediaQuery,
+} from '@mui/material'
+import Grid from '@mui/material/Grid2'
+import { motion } from 'framer-motion'
+import {
+  ArrowBack,
+  LightMode,
+  DarkMode,
+  AutoAwesome,
+} from '@mui/icons-material'
+
+// Create motion components
+const MotionBox = motion(Box)
+const MotionCard = motion(Card)
+const MotionTypography = motion(Typography)
 
 /**
- * AuthLayout: Splits screen into 2 columns (left image, right form).
- * On small screens, form stacks on top and image is partially blurred behind.
+ * AuthLayout: Modern, tech-themed layout for authentication pages
  */
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return (
-    <div className="min-h-screen w-full flex flex-col md:flex-row">
-      {/* Left column: image */}
-      <div className="relative w-full md:w-1/2 h-64 md:h-auto">
-        <Image
-          src="/images/logo.webp" // Your image path
-          alt="Auth Background"
-          fill
-          priority
-          className="object-cover"
-        />
-        {/* Overlay (semi-transparent) */}
-        {/* <div className="absolute inset-0 bg-black/30 md:bg-black/50" /> */}
-      </div>
+  const theme = useTheme()
+  const router = useRouter()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const isDark = theme.palette.mode === 'dark'
 
-      {/* Right column: form content */}
-      <div className="w-full md:w-1/2 flex items-center justify-center py-8 px-4 bg-base-100">
-        <Card
-          className="shadow-xl w-full max-w-md"
-          sx={{ borderRadius: 4, margin: 2 }}
+  // Animation variants
+  const contentVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { duration: 0.6 } },
+  }
+
+  return (
+    <Box
+      sx={{
+        minHeight: '100vh',
+        width: '100%',
+        display: 'flex',
+        position: 'relative',
+        background: `linear-gradient(135deg, ${
+          isDark ? 'rgba(13,15,20,0.95)' : 'rgba(240,242,245,0.9)'
+        } 0%, ${
+          isDark ? 'rgba(20,25,40,0.95)' : 'rgba(250,252,255,0.9)'
+        } 100%)`,
+        overflow: 'hidden',
+      }}
+    >
+      {/* Animated background elements */}
+      <Box
+        sx={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0 }}
+      >
+        {Array.from({ length: 20 }).map((_, i) => (
+          <MotionBox
+            key={i}
+            sx={{
+              position: 'absolute',
+              background: `linear-gradient(135deg, ${theme.palette.primary.main}20, ${theme.palette.secondary.main}30)`,
+              borderRadius: '50%',
+              filter: 'blur(40px)',
+            }}
+            initial={{
+              x: Math.random() * 100 - 50 + '%',
+              y: Math.random() * 100 - 50 + '%',
+              width: 100 + Math.random() * 200 + 'px',
+              height: 100 + Math.random() * 200 + 'px',
+              opacity: 0.1 + Math.random() * 0.2,
+            }}
+            animate={{
+              x: [null, Math.random() * 2 - 1 + '%'],
+              y: [null, Math.random() * 2 - 1 + '%'],
+              opacity: [null, 0.1 + Math.random() * 0.2],
+            }}
+            transition={{
+              duration: 10 + Math.random() * 20,
+              repeat: Infinity,
+              repeatType: 'mirror',
+            }}
+          />
+        ))}
+      </Box>
+
+      {/* Navigation buttons */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 20,
+          left: 20,
+          zIndex: 2,
+          display: 'flex',
+          gap: 1,
+        }}
+      >
+        <Tooltip title="Back to home">
+          <IconButton
+            onClick={() => router.push('/')}
+            component={motion.button}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            sx={{
+              bgcolor: theme.palette.background.paper,
+              boxShadow: theme.shadows[2],
+            }}
+          >
+            <ArrowBack />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title={isDark ? 'Light mode' : 'Dark mode'}>
+          <IconButton
+            // Toggle theme action would go here
+            component={motion.button}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            sx={{
+              bgcolor: theme.palette.background.paper,
+              boxShadow: theme.shadows[2],
+            }}
+          >
+            {isDark ? <LightMode /> : <DarkMode />}
+          </IconButton>
+        </Tooltip>
+      </Box>
+
+      {/* Main content */}
+      <Grid container sx={{ width: '100%', height: '100%', zIndex: 1 }}>
+        {/* Left branding section */}
+        <Grid
+          size={{ xs: 12, md: 6 }}
+          sx={{
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            p: 4,
+            textAlign: 'center',
+          }}
         >
-          <CardContent className="p-6 sm:p-8">{children}</CardContent>
-        </Card>
-      </div>
-    </div>
+          <MotionBox
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.1 }}
+            sx={{
+              maxWidth: 500,
+              display: { xs: 'flex', md: 'block' },
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
+          >
+            <Link
+              href="/"
+              style={{ display: 'inline-block', marginBottom: 24 }}
+            >
+              <MotionBox
+                component="img"
+                src="/images/logo.webp"
+                alt="Vision Forge"
+                whileHover={{ scale: 1.05 }}
+                width={isMobile ? 120 : 160}
+                height="auto"
+                sx={{
+                  objectFit: 'contain',
+                  filter: 'drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.2))',
+                }}
+              />
+            </Link>
+
+            <MotionTypography
+              variant={isMobile ? 'h5' : 'h3'}
+              component="h1"
+              fontWeight="bold"
+              sx={{
+                mb: 2,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                display: { xs: 'none', md: 'block' },
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+            >
+              Vision Forge
+            </MotionTypography>
+
+            <MotionTypography
+              variant="h6"
+              color="text.secondary"
+              sx={{
+                mb: 4,
+                display: { xs: 'none', md: 'block' },
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
+            >
+              <Box
+                component="span"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                }}
+              >
+                <AutoAwesome fontSize="small" color="primary" />
+                Empowering your creativity with AI
+              </Box>
+            </MotionTypography>
+
+            <MotionBox
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.6, duration: 0.6 }}
+              sx={{
+                position: 'relative',
+                width: '100%',
+                height: { xs: 180, sm: 240, md: 300 },
+                borderRadius: 4,
+                overflow: 'hidden',
+                display: { xs: 'none', md: 'block' },
+                boxShadow: theme.shadows[8],
+              }}
+            >
+              <Image
+                src="/images/logo.webp"
+                alt="AI Technology"
+                fill
+                style={{ objectFit: 'cover' }}
+                priority
+              />
+              <Box
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: `linear-gradient(135deg, ${theme.palette.primary.dark}40, ${theme.palette.secondary.dark}40)`,
+                }}
+              />
+            </MotionBox>
+          </MotionBox>
+        </Grid>
+
+        {/* Right form section */}
+        <Grid
+          size={{ xs: 12, md: 6 }}
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            p: { xs: 2, sm: 4, md: 6 },
+          }}
+        >
+          <MotionCard
+            variants={contentVariants}
+            initial="hidden"
+            animate="visible"
+            sx={{
+              width: '100%',
+              maxWidth: 480,
+              borderRadius: 3,
+              overflow: 'hidden',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+              background: theme.palette.background.paper,
+              backdropFilter: 'blur(8px)',
+              border: `1px solid ${theme.palette.divider}`,
+            }}
+          >
+            <CardContent sx={{ p: { xs: 3, sm: 4 } }}>{children}</CardContent>
+          </MotionCard>
+        </Grid>
+      </Grid>
+    </Box>
   )
 }
