@@ -524,14 +524,7 @@ const ImageGallery: React.FC = () => {
       )}
 
       {totalPages > 1 && !loading && sortedImages.length > 0 && (
-        <MotionBox
-          display="flex"
-          justifyContent="center"
-          mt={4}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
+        <motion.div whileHover={{ scale: 1.05 }}>
           <Pagination
             count={totalPages}
             page={page}
@@ -539,8 +532,6 @@ const ImageGallery: React.FC = () => {
             color="primary"
             size={isMobile ? 'small' : 'medium'}
             siblingCount={isMobile ? 0 : 1}
-            component={motion.div}
-            whileHover={{ scale: 1.05 }}
             sx={{
               '& .MuiPaginationItem-root': {
                 transition: 'all 0.2s ease',
@@ -551,7 +542,7 @@ const ImageGallery: React.FC = () => {
               },
             }}
           />
-        </MotionBox>
+        </motion.div>
       )}
     </MotionBox>
   )
