@@ -43,6 +43,7 @@ export default function GenerateVideoFlowPage() {
   const [selectedContentStyle, setSelectedContentStyle] = useState('default')
   const [selectedLanguage, setSelectedLanguage] = useState('vi')
   const [localContent, setLocalContent] = useState('')
+  const [sources, setSources] = useState<Source[]>([])
 
   // State for Step 2 – Images & Scripts Editing
   const [imagesData, setImagesData] = useState<{
@@ -178,6 +179,7 @@ export default function GenerateVideoFlowPage() {
   useEffect(() => {
     if (script) {
       setLocalContent(script.content)
+      setSources(script.sources || [])
     }
   }, [script])
 
@@ -492,6 +494,7 @@ export default function GenerateVideoFlowPage() {
             languageOptions={languageOptions}
             onReset={handleReset}
             isGeneratingScript={isGeneratingScript}
+            sources={sources}
           />
         </PageTransition>
 

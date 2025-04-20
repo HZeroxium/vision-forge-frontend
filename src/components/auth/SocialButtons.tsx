@@ -7,8 +7,8 @@ import { useTranslation } from 'react-i18next'
 import env from '@/config/env' // Make sure this exists with API_URL
 
 // Create motion components
-const MotionButton = motion(Button)
-const MotionBox = motion(Box)
+const MotionButton = motion.create(Button)
+const MotionBox = motion.create(Box)
 
 interface SocialButtonsProps {
   direction?: 'row' | 'column'

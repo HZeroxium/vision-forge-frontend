@@ -1,12 +1,20 @@
 // src/services/scriptService.ts
 import api from './api'
 
+export interface Source {
+  title: string
+  content: string
+  url: string
+  source_type: string
+}
+
 export interface Script {
   id: string
   title: string
   content: string
   style: string
   language: string
+  sources?: Source[]
   createdAt: string
   updatedAt: string
 }

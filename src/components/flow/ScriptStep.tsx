@@ -12,9 +12,14 @@ import {
   MenuItem,
   Snackbar,
   Alert,
+  Divider,
+  Paper,
 } from '@mui/material'
 import RestartAltIcon from '@mui/icons-material/RestartAlt'
+import FactCheckIcon from '@mui/icons-material/FactCheck'
 import LoadingIndicator from '../common/LoadingIndicator'
+import SourcesList from './SourcesList'
+import { Source } from '@services/scriptsService'
 
 interface ScriptStepProps {
   title: string
@@ -27,12 +32,13 @@ interface ScriptStepProps {
   setLocalContent: (value: string) => void
   scriptExists: boolean
   onCreateScript: () => Promise<void>
-  onUpdateScript: () => Promise<any> // Thay đổi từ Promise<void> thành Promise<any>
+  onUpdateScript: () => Promise<any>
   onProceedToImages: () => Promise<void>
   contentStyleOptions: string[]
   languageOptions: { value: string; label: string }[]
   onReset: () => void
   isGeneratingScript?: boolean
+  sources?: Source[] // Add sources prop
 }
 
 const ScriptStep: React.FC<ScriptStepProps> = ({
@@ -52,6 +58,7 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
   languageOptions,
   onReset,
   isGeneratingScript = false,
+  sources = [], // Default to empty array
 }) => {
   const [showNoScriptAlert, setShowNoScriptAlert] = useState(false)
   const [isUpdatingScript, setIsUpdatingScript] = useState(false)
@@ -75,6 +82,8 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
       setIsUpdatingScript(false)
     }
   }
+
+  const hasSources = sources && sources.length > 0
 
   return (
     <Box display="flex" flexDirection="column" gap={2}>
@@ -165,7 +174,35 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
             value={localContent}
             onChange={(e) => setLocalContent(e.target.value)}
           />
-          <Box display="flex" gap={2}>
+
+          {hasSources && (
+            <Paper
+              elevation={0}
+              variant="outlined"
+              sx={{
+                p: 2,
+                mt: 2,
+                borderColor: 'primary.light',
+                backgroundColor: (theme) =>
+                  theme.palette.mode === 'dark'
+                    ? 'rgba(66, 66, 66, 0.2)'
+                    : 'rgba(230, 244, 255, 0.4)',
+              }}
+            >
+              <Box display="flex" alignItems="center" mb={1}>
+                <FactCheckIcon color="primary" sx={{ mr: 1 }} />
+                <Typography variant="subtitle1" color="primary">
+                  Fact Checked Content
+                </Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                This script has been fact-checked against reliable sources. View
+                the sources below for verification.
+              </Typography>
+            </Paper>
+          )}
+
+          <Box display="flex" gap={2} mt={2}>
             <Button
               variant="outlined"
               onClick={handleUpdateScript}
@@ -182,7 +219,23 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
             >
               {isUpdatingScript ? 'Updating...' : 'Update Script'}
             </Button>
+
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={onProceedToImages}
+              disabled={isGeneratingScript || isUpdatingScript}
+            >
+              Proceed to Images
+            </Button>
           </Box>
+
+          {hasSources && (
+            <>
+              <Divider sx={{ my: 3 }} />
+              <SourcesList sources={sources} />
+            </>
+          )}
         </>
       )}
 
