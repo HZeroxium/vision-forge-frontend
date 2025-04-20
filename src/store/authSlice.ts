@@ -169,6 +169,31 @@ export const fetchUserProfile = createAsyncThunk(
   }
 )
 
+// Async thunk for Google authentication
+export const setGoogleAuth = createAsyncThunk(
+  'auth/setGoogleAuth',
+  async (token: string, { rejectWithValue }) => {
+    try {
+      // The token is already saved in localStorage in the callback page
+
+      // Fetch the user profile with the token
+      const user = await authService.getProfile()
+
+      // Store user data in localStorage for persistence
+      localStorage.setItem('user', JSON.stringify(user))
+
+      return { token, user }
+    } catch (error: any) {
+      // Clear invalid authentication data
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      return rejectWithValue(
+        error.response?.data?.message || 'Failed to authenticate with Google'
+      )
+    }
+  }
+)
+
 // Create authSlice using createSlice API from Redux Toolkit
 const authSlice = createSlice({
   name: 'auth',
@@ -286,6 +311,24 @@ const authSlice = createSlice({
         state.user = null
         state.loading = false
         state.error = action.payload as string
+      })
+      // Handle Google auth
+      .addCase(setGoogleAuth.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(
+        setGoogleAuth.fulfilled,
+        (state, action: PayloadAction<{ token: string; user: User }>) => {
+          state.loading = false
+          state.token = action.payload.token
+          state.user = action.payload.user
+        }
+      )
+      .addCase(setGoogleAuth.rejected, (state, action) => {
+        state.loading = false
+        state.error =
+          (action.payload as string) || 'Google authentication failed'
       })
   },
 })

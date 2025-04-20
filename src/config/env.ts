@@ -1,7 +1,8 @@
 // src/config/env.ts
+// Simple environment configuration
 const env = {
-  API_URL: process.env.NEST_API_URL || 'http://localhost:5000/api',
-  JWT_SECRET: process.env.JWT_SECRET || 'your_jwt_secret_here',
+  API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
+  FRONTEND_URL: process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000',
 }
-// Add another environment variable
+
 export default env
