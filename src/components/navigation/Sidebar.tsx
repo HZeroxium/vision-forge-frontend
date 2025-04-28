@@ -16,6 +16,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import SettingsIcon from '@mui/icons-material/Settings'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
+import YouTubeIcon from '@mui/icons-material/YouTube';
 
 // Custom components
 import SidebarContent, { RouteGroup } from './SidebarContent'
@@ -73,6 +74,12 @@ const routes: RouteGroup[] = [
         path: '/media/videos',
         text: 'Video Gallery',
         icon: <VideoLibraryIcon />,
+        protected: true,
+      },
+      {
+        path: '/media/videos/uploadYoutube',
+        text: 'Upload video to Youtube',
+        icon: <YouTubeIcon />,
         protected: true,
       },
     ],
