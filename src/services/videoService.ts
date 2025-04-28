@@ -89,3 +89,4 @@ export const deleteVideo = async (id: string): Promise<Video> => {
   const response = await api.delete(`/videos/${id}`)
   return response.data
 }
+
