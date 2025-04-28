@@ -9,6 +9,7 @@ import {
   useTheme,
   useMediaQuery,
   alpha,
+  IconButton,
 } from '@mui/material'
 import { motion } from 'framer-motion'
 import VideoGallery from '@components/video/VideoGallery'
@@ -19,14 +20,19 @@ import {
   VideoLibrary,
   AddCircleOutline,
   Upload,
+  YouTube,
 } from '@mui/icons-material'
+
 import Grid from '@mui/material/Grid2'
+import { useRouter } from 'next/navigation';
 
 const MotionTypography = motion(Typography)
 const MotionBox = motion(Box)
 const MotionPaper = motion(Paper)
+const MotionIconButton = motion(IconButton)
 
 export default function VideosPage() {
+  const router = useRouter();
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const isTablet = useMediaQuery(theme.breakpoints.down('md'))
@@ -37,6 +43,10 @@ export default function VideosPage() {
     transition: { type: 'spring', stiffness: 300, damping: 20 },
   }
 
+  const handleRedirectToUpload = () => {
+    router.push('/media/videos/uploadYoutube'); // Chuyển hướng đến trang /uploadYoutube
+  };
+  
   return (
     <Container maxWidth="xl" sx={{ pt: 4, pb: 6 }}>
       <MotionBox
@@ -105,7 +115,7 @@ export default function VideosPage() {
                 <MovieCreation sx={{ mr: 1, fontSize: 30 }} />
                 <MotionTypography
                   variant="h4"
-                  component="h1"
+                  // component="h1"
                   fontWeight="bold"
                   sx={{ textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
                 >
@@ -365,6 +375,15 @@ export default function VideosPage() {
         >
           <VideoGallery />
         </MotionPaper>
+        <MotionIconButton
+                    color="secondary"
+                    onClick={handleRedirectToUpload}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    sx={{ bgcolor: 'action.hover' }}
+                  >
+                    <YouTube />
+                  </MotionIconButton>
       </MotionBox>
     </Container>
   )

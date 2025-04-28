@@ -259,6 +259,10 @@ export default function VideoDetailPage() {
     }
   }
 
+  const handleRedirectToUpload = (id: string) => {
+    router.push('/media/videos/uploadYoutube/${id}'); // Chuyển hướng đến trang /uploadYoutube
+  };
+
 
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60)
@@ -331,10 +335,7 @@ export default function VideoDetailPage() {
     )
   }
 
-  const handleRedirectToUpload = () => {
-    router.push('/uploadYoutube'); // Chuyển hướng đến trang /uploadYoutube
-  };
-
+  
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <MotionBox
