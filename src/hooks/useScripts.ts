@@ -6,8 +6,12 @@ import {
   createScriptAsync,
   updateScriptAsync,
   fetchScriptAsync,
+  fetchScriptsAsync,
+  fetchUserScriptsAsync,
   deleteScriptAsync,
   clearScriptError,
+  clearScriptsError,
+  clearUserScriptsError as clearUserScriptsErrorImport,
   resetScript,
 } from '@store/scriptsSlice'
 
@@ -59,20 +63,46 @@ export const useScripts = () => {
   // Memoized function to fetch script details
   const fetchScript = useCallback(
     (id: string) => {
-      dispatch(fetchScriptAsync(id))
+      return dispatch(fetchScriptAsync(id)).unwrap()
     },
     [dispatch]
   )
 
+  // Memoized function to fetch all scripts
+  const fetchScripts = useCallback(
+    (page?: number, limit?: number) => {
+      return dispatch(fetchScriptsAsync({ page, limit })).unwrap()
+    },
+    [dispatch]
+  )
+
+  // Memoized function to fetch user scripts
+  const fetchUserScripts = useCallback(
+    (page?: number, limit?: number) => {
+      return dispatch(fetchUserScriptsAsync({ page, limit })).unwrap()
+    },
+    [dispatch]
+  )
+
+  // Memoized function to delete script
   const deleteScript = useCallback(
     (id: string) => {
-      dispatch(deleteScriptAsync(id))
+      return dispatch(deleteScriptAsync(id)).unwrap()
     },
     [dispatch]
   )
 
+  // Memoized functions to clear errors
   const clearError = useCallback(() => {
     dispatch(clearScriptError())
+  }, [dispatch])
+
+  const clearAllScriptsError = useCallback(() => {
+    dispatch(clearScriptsError())
+  }, [dispatch])
+
+  const clearUserScriptsError = useCallback(() => {
+    dispatch({ type: 'scripts/clearUserScriptsError' })
   }, [dispatch])
 
   const resetScriptState = useCallback(() => {
@@ -84,8 +114,12 @@ export const useScripts = () => {
     createScript,
     updateScript,
     fetchScript,
+    fetchScripts,
+    fetchUserScripts,
     deleteScript,
     clearError,
+    clearAllScriptsError,
+    clearUserScriptsError,
     resetScriptState,
   }
 }

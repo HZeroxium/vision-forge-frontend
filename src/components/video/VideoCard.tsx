@@ -1,3 +1,5 @@
+// /src/components/video/VideoCard.tsx
+
 'use client'
 import React, { useState, useRef, useEffect } from 'react'
 import {
@@ -84,7 +86,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
       case 'failed':
         return 'error'
       default:
-        return 'default'
+        return 'info' // Changed from 'default' to 'info' which exists in MUI palette
     }
   }
 

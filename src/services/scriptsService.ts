@@ -1,4 +1,5 @@
 // src/services/scriptService.ts
+
 import api from './api'
 
 export interface Source {
@@ -17,6 +18,7 @@ export interface Script {
   sources?: Source[]
   createdAt: string
   updatedAt: string
+  userId?: string
 }
 
 export interface ScriptsPaginationDto {
@@ -59,13 +61,26 @@ export const updateScript = async (
 }
 
 /**
- * Fetch a paginated list of scripts.
+ * Fetch a paginated list of all scripts.
  */
 export const fetchScripts = async (
   page: number = 1,
   limit: number = 10
 ): Promise<ScriptsPaginationDto> => {
   const response = await api.get('/scripts', { params: { page, limit } })
+  return response.data
+}
+
+/**
+ * Fetch a paginated list of scripts belonging to the current user.
+ */
+export const fetchUserScripts = async (
+  page: number = 1,
+  limit: number = 10
+): Promise<ScriptsPaginationDto> => {
+  const response = await api.get('/scripts/user/me', {
+    params: { page, limit },
+  })
   return response.data
 }
 

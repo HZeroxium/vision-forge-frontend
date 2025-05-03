@@ -1,3 +1,5 @@
+// /src/app/media/videos/page.tsx
+
 'use client'
 import React from 'react'
 import {
@@ -105,11 +107,10 @@ export default function VideosPage() {
                 <MovieCreation sx={{ mr: 1, fontSize: 30 }} />
                 <MotionTypography
                   variant="h4"
-                  component="h1"
                   fontWeight="bold"
                   sx={{ textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
                 >
-                  Video Library
+                  My Video Library
                 </MotionTypography>
               </MotionBox>
 
@@ -125,8 +126,8 @@ export default function VideosPage() {
                 animate={{ y: 0, opacity: 0.9 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
               >
-                Your AI-generated videos collection - browse, manage, and use
-                them in your projects
+                Browse through your AI-generated videos created with Vision
+                Forge
               </MotionTypography>
 
               <MotionBox
@@ -353,7 +354,7 @@ export default function VideosPage() {
           </Grid>
         </MotionBox>
 
-        {/* Gallery Section */}
+        {/* Gallery Section - Using 'user' mode to show only the current user's videos */}
         <MotionPaper
           variants={fadeIn}
           elevation={2}
@@ -363,7 +364,7 @@ export default function VideosPage() {
             backgroundColor: 'background.paper',
           }}
         >
-          <VideoGallery />
+          <VideoGallery mode="user" />
         </MotionPaper>
       </MotionBox>
     </Container>

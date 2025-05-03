@@ -13,6 +13,7 @@ export interface Audio {
   durationSeconds: number
   createdAt: string
   updatedAt: string
+  userId?: string // Added to track ownership
 }
 
 /**
@@ -39,12 +40,26 @@ export const createAudio = async (data: {
 
 /**
  * Fetches a paginated list of audio assets.
+ * Optional userId filter can be provided
  */
 export const fetchAudios = async (
   page = 1,
+  limit = 10,
+  userId?: string
+): Promise<AudiosPaginationDto> => {
+  const params = { page, limit, ...(userId && { userId }) }
+  const response = await api.get('/audios', { params })
+  return response.data
+}
+
+/**
+ * Fetches a paginated list of the current user's audio assets.
+ */
+export const fetchUserAudios = async (
+  page = 1,
   limit = 10
 ): Promise<AudiosPaginationDto> => {
-  const response = await api.get('/audios', { params: { page, limit } })
+  const response = await api.get('/audios/user/me', { params: { page, limit } })
   return response.data
 }
 

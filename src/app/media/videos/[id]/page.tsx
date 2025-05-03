@@ -1,3 +1,5 @@
+// /src/app/media/videos/[id]/page.tsx
+
 'use client'
 
 import React, { useEffect, useState, useRef } from 'react'
@@ -261,8 +263,8 @@ export default function VideoDetailPage() {
 
   const handleRedirectToUpload = () => {
     if (!id) return
-    router.push('/media/videos/uploadYoutube/${id}'); // Chuyển hướng đến trang /uploadYoutube
-  };
+    router.push('/media/videos/uploadYoutube/${id}') // Chuyển hướng đến trang /uploadYoutube
+  }
 
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60)
@@ -335,7 +337,6 @@ export default function VideoDetailPage() {
     )
   }
 
-  
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <MotionBox
@@ -738,15 +739,20 @@ export default function VideoDetailPage() {
                     </IconButton>
                   </Typography>
                   <Typography variant="body2" paragraph>
-                    <strong>Status:
-                    <Chip
-                      label={video.status}
-                      size="small"
-                      color={
-                        video.status === 'completed' ? 'success' : 'warning'
-                      }
-                      sx={{ ml: 1, display: 'inline-flex', alignItems: 'center'}}
-                    />
+                    <strong>
+                      Status:
+                      <Chip
+                        label={video.status}
+                        size="small"
+                        color={
+                          video.status === 'completed' ? 'success' : 'warning'
+                        }
+                        sx={{
+                          ml: 1,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                        }}
+                      />
                     </strong>{' '}
                   </Typography>
                 </Box>
@@ -824,7 +830,6 @@ export default function VideoDetailPage() {
                     <Alert severity="error">{uploadError}</Alert>
                   </MotionBox>
                 )}
-
 
                 <Box sx={{ mt: 'auto', display: 'flex', gap: 1 }}>
                   <MotionButton

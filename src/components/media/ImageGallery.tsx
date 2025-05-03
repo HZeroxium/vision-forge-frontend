@@ -23,18 +23,19 @@ import {
   Tooltip,
   Fade,
   Badge,
+  Alert,
 } from '@mui/material'
 import {
   Search,
-  FilterList,
+  FilterAlt,
   ViewModule,
   ViewQuilt,
   GridView,
   ViewCompact,
   SortRounded,
   Close,
-  FilterAlt,
   ClearAll,
+  ArrowUpward,
 } from '@mui/icons-material'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
@@ -45,17 +46,46 @@ import { staggerContainer, staggerFast, fadeIn } from '@/utils/animations'
 
 const MotionBox = motion(Box)
 const MotionPaper = motion(Paper)
+const MotionButton = motion(Button)
 
 // Define the gallery layout types
 type LayoutType = 'grid' | 'compact' | 'cascade' | 'pinterest'
 
-const ImageGallery: React.FC = () => {
-  const { images, loading, error, page, totalPages, loadImages } = useImages()
+// Define props for ImageGallery component
+interface ImageGalleryProps {
+  mode?: 'all' | 'user'
+}
+
+const ImageGallery: React.FC<ImageGalleryProps> = ({ mode = 'all' }) => {
+  const {
+    // All images state
+    images,
+    loading,
+    error,
+    page,
+    totalPages,
+    loadImages,
+    clearError,
+
+    // User images state
+    userImages,
+    userLoading,
+    userError,
+    userPage,
+    userTotalPages,
+    loadUserImages,
+    clearUserError,
+
+    // Actions
+    deleteImage,
+  } = useImages()
+
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('newest')
   const [filterOpen, setFilterOpen] = useState(false)
   const [layout, setLayout] = useState<LayoutType>('cascade')
   const [filterCount, setFilterCount] = useState(0)
+  const [scrolled, setScrolled] = useState(false)
   const router = useRouter()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
@@ -64,13 +94,23 @@ const ImageGallery: React.FC = () => {
 
   const skeletonArray = Array.from({ length: 9 }, (_, i) => i)
 
+  // Determine which data, loading state, and error to use based on mode
+  const currentImages = mode === 'all' ? images : userImages
+  const currentLoading = mode === 'all' ? loading : userLoading
+  const currentError = mode === 'all' ? error : userError
+  const currentPage = mode === 'all' ? page : userPage
+  const currentTotalPages = mode === 'all' ? totalPages : userTotalPages
+
+  // Choose the appropriate load function based on mode
+  const loadCurrentImages = mode === 'all' ? loadImages : loadUserImages
+  const clearCurrentError = mode === 'all' ? clearError : clearUserError
+
   useEffect(() => {
     // Only fetch images if there is no error (avoid auto-retry spam)
-    if (!error) {
-      loadImages(page, 12)
+    if (!currentError) {
+      loadCurrentImages(currentPage, 12)
     }
-    // page and loadImages are dependencies, error stops auto retry on error state
-  }, [loadImages, page, error])
+  }, [loadCurrentImages, currentPage, currentError])
 
   useEffect(() => {
     // Calculate filter count - this helps visually indicate when filters are active
@@ -80,12 +120,26 @@ const ImageGallery: React.FC = () => {
     setFilterCount(count)
   }, [searchTerm, sortBy])
 
+  // Track scroll for floating back-to-top button
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 100) {
+        setScrolled(true)
+      } else {
+        setScrolled(false)
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   const handlePageChange = (
     event: React.ChangeEvent<unknown>,
     value: number
   ) => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
-    setTimeout(() => loadImages(value, 12), 300)
+    setTimeout(() => loadCurrentImages(value, 12), 300)
   }
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,6 +152,21 @@ const ImageGallery: React.FC = () => {
 
   const handleCardClick = (id: string) => {
     router.push(`/media/images/${id}`)
+  }
+
+  const handleDeleteImage = async (id: string) => {
+    if (mode !== 'user') return
+
+    try {
+      await deleteImage(id)
+      // The image will be removed from state by the reducer
+    } catch (error) {
+      console.error('Failed to delete image:', error)
+    }
+  }
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const toggleFilterView = () => {
@@ -113,7 +182,7 @@ const ImageGallery: React.FC = () => {
     setLayout(newLayout)
   }
 
-  const filteredImages = images.filter(
+  const filteredImages = currentImages.filter(
     (img) =>
       img.prompt.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (img.style && img.style.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -333,26 +402,33 @@ const ImageGallery: React.FC = () => {
     </MotionPaper>
   )
 
-  if (error) {
+  if (currentError) {
     return (
       <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
-        <Typography variant="h6" color="error">
-          Oops! Failed to load images.
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {error}
-        </Typography>
-        <Button
-          variant="outlined"
+        <Alert
+          severity="error"
+          sx={{
+            mb: 2,
+            width: '100%',
+            maxWidth: 500,
+            borderRadius: 2,
+          }}
+        >
+          Oops! Failed to load images. {currentError}
+        </Alert>
+        <MotionButton
+          variant="contained"
           color="primary"
-          onClick={() => loadImages(page, 12)}
+          onClick={() => {
+            clearCurrentError()
+            loadCurrentImages(currentPage, 12)
+          }}
           sx={{ mt: 2 }}
-          component={motion.button}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          Retry
-        </Button>
+          Retry Loading
+        </MotionButton>
       </Box>
     )
   }
@@ -380,7 +456,7 @@ const ImageGallery: React.FC = () => {
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
-          {loading ? (
+          {currentLoading ? (
             <Box
               component="span"
               sx={{ display: 'flex', alignItems: 'center' }}
@@ -412,7 +488,7 @@ const ImageGallery: React.FC = () => {
       {(!isMobile || filterOpen) && renderFilterBar()}
 
       <AnimatePresence mode="wait">
-        {loading ? (
+        {currentLoading ? (
           <MotionBox
             key="loading"
             variants={staggerContainer}
@@ -431,7 +507,6 @@ const ImageGallery: React.FC = () => {
                 <MotionBox
                   key={item}
                   variants={fadeIn}
-                  component={Paper}
                   sx={{
                     borderRadius: 3,
                     overflow: 'hidden',
@@ -480,6 +555,9 @@ const ImageGallery: React.FC = () => {
                     image={image}
                     index={index}
                     onCardClick={handleCardClick}
+                    onDeleteClick={
+                      mode === 'user' ? handleDeleteImage : undefined
+                    }
                     compact={layout === 'compact'}
                   />
                 </motion.div>
@@ -489,7 +567,7 @@ const ImageGallery: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {sortedImages.length === 0 && !loading && (
+      {sortedImages.length === 0 && !currentLoading && (
         <MotionBox
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -506,9 +584,13 @@ const ImageGallery: React.FC = () => {
             No images found
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Try adjusting your search or filters
+            {searchTerm
+              ? 'Try adjusting your search or filters'
+              : mode === 'user'
+                ? 'Create your first image to get started'
+                : 'No images are available yet'}
           </Typography>
-          {searchTerm && (
+          {searchTerm ? (
             <Button
               variant="outlined"
               sx={{ mt: 2 }}
@@ -519,15 +601,35 @@ const ImageGallery: React.FC = () => {
             >
               Clear Search
             </Button>
+          ) : (
+            mode === 'user' && (
+              <Button
+                variant="contained"
+                sx={{ mt: 2 }}
+                onClick={() => router.push('/flow/generate-image')}
+                component={motion.button}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Create Image
+              </Button>
+            )
           )}
         </MotionBox>
       )}
 
-      {totalPages > 1 && !loading && sortedImages.length > 0 && (
-        <motion.div whileHover={{ scale: 1.05 }}>
+      {currentTotalPages > 1 && !currentLoading && sortedImages.length > 0 && (
+        <MotionBox
+          display="flex"
+          justifyContent="center"
+          mt={4}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
           <Pagination
-            count={totalPages}
-            page={page}
+            count={currentTotalPages}
+            page={currentPage}
             onChange={handlePageChange}
             color="primary"
             size={isMobile ? 'small' : 'medium'}
@@ -542,7 +644,39 @@ const ImageGallery: React.FC = () => {
               },
             }}
           />
-        </motion.div>
+        </MotionBox>
+      )}
+
+      {scrolled && (
+        <MotionBox
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, y: 20 }}
+          transition={{ duration: 0.3 }}
+          sx={{
+            position: 'fixed',
+            bottom: 20,
+            right: 20,
+            zIndex: 10,
+          }}
+        >
+          <IconButton
+            color="primary"
+            sx={{
+              bgcolor: 'background.paper',
+              boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+              '&:hover': {
+                bgcolor: 'background.paper',
+              },
+            }}
+            onClick={scrollToTop}
+            component={motion.button}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            <ArrowUpward />
+          </IconButton>
+        </MotionBox>
       )}
     </MotionBox>
   )

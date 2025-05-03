@@ -51,9 +51,35 @@ const MotionButton = motion(Button)
 // Define the gallery layout types
 type LayoutType = 'grid' | 'list' | 'compact'
 
-const AudioGallery: React.FC = () => {
-  const { audios, loading, error, page, totalPages, loadAudios, clearError } =
-    useAudios()
+// Define props for AudioGallery component
+interface AudioGalleryProps {
+  mode?: 'all' | 'user'
+}
+
+const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
+  const {
+    // All audios state
+    audios,
+    loading,
+    error,
+    page,
+    totalPages,
+    loadAudios,
+    clearError,
+
+    // User audios state
+    userAudios,
+    userLoading,
+    userError,
+    userPage,
+    userTotalPages,
+    loadUserAudios,
+    clearUserError,
+
+    // Actions
+    deleteAudio,
+  } = useAudios()
+
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('newest')
   const [filterOpen, setFilterOpen] = useState(false)
@@ -67,12 +93,23 @@ const AudioGallery: React.FC = () => {
 
   const skeletonArray = Array.from({ length: 6 }, (_, i) => i)
 
+  // Determine which data, loading state, and error to use based on mode
+  const currentAudios = mode === 'all' ? audios : userAudios
+  const currentLoading = mode === 'all' ? loading : userLoading
+  const currentError = mode === 'all' ? error : userError
+  const currentPage = mode === 'all' ? page : userPage
+  const currentTotalPages = mode === 'all' ? totalPages : userTotalPages
+
+  // Choose the appropriate load function based on mode
+  const loadCurrentAudios = mode === 'all' ? loadAudios : loadUserAudios
+  const clearCurrentError = mode === 'all' ? clearError : clearUserError
+
   useEffect(() => {
-    // Only fetch audios if there is no error to prevent auto-retry spam
-    if (!error) {
-      loadAudios(page, 12)
+    // Only fetch audios if there is no error (avoid auto-retry spam)
+    if (!currentError) {
+      loadCurrentAudios(currentPage, 12)
     }
-  }, [loadAudios, page, error])
+  }, [loadCurrentAudios, currentPage, currentError])
 
   useEffect(() => {
     // Calculate filter count - this helps visually indicate when filters are active
@@ -100,7 +137,7 @@ const AudioGallery: React.FC = () => {
     value: number
   ) => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
-    setTimeout(() => loadAudios(value, 12), 300)
+    setTimeout(() => loadCurrentAudios(value, 12), 300)
   }
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,12 +165,19 @@ const AudioGallery: React.FC = () => {
     setLayout(newLayout)
   }
 
-  const handleDelete = (id: string) => {
-    // Implementation for delete functionality
-    console.log('Delete audio with id:', id)
+  const handleDelete = async (id: string) => {
+    if (mode !== 'user') return
+
+    if (confirm('Are you sure you want to delete this audio?')) {
+      try {
+        await deleteAudio(id)
+      } catch (error) {
+        console.error('Failed to delete audio:', error)
+      }
+    }
   }
 
-  const filteredAudios = audios.filter(
+  const filteredAudios = currentAudios.filter(
     (audio) =>
       (audio.provider &&
         audio.provider.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -155,39 +199,14 @@ const AudioGallery: React.FC = () => {
   })
 
   // Get grid columns based on layout and screen size
-  const getGridColumns = () => {
-    if (layout === 'compact') {
-      return {
-        xs: 'repeat(1, 1fr)',
-        sm: 'repeat(2, 1fr)',
-        md: 'repeat(3, 1fr)',
-        lg: 'repeat(4, 1fr)',
-      }
-    }
-    if (layout === 'list') {
-      return {
-        xs: '1fr',
-        sm: '1fr',
-        md: '1fr',
-        lg: '1fr',
-      }
-    }
-    return {
-      xs: '1fr',
-      sm: 'repeat(2, 1fr)',
-      md: 'repeat(3, 1fr)',
-      lg: 'repeat(3, 1fr)',
-    }
-  }
-
   const getGridItemSize = () => {
     if (layout === 'list') {
-      return { xs: 12, sm: 12, md: 12 }
+      return { xs: 12 }
     }
     if (layout === 'compact') {
-      return { xs: 12, sm: 6, md: 4, lg: 3 }
+      return { xs: 6, sm: 4, md: 3, lg: 2 }
     }
-    return { xs: 12, sm: 6, md: 4 }
+    return { xs: 12, sm: 6, md: 4, lg: 3 }
   }
 
   const getGridGap = () => {
@@ -346,7 +365,7 @@ const AudioGallery: React.FC = () => {
     </MotionPaper>
   )
 
-  if (error) {
+  if (currentError) {
     return (
       <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
         <Alert
@@ -358,17 +377,16 @@ const AudioGallery: React.FC = () => {
             borderRadius: 2,
           }}
         >
-          Oops! Failed to load audio files. {error}
+          Oops! Failed to load audio files. {currentError}
         </Alert>
         <MotionButton
           variant="contained"
           color="primary"
           onClick={() => {
-            clearError()
-            loadAudios(page, 12)
+            clearCurrentError()
+            loadCurrentAudios(currentPage, 12)
           }}
           sx={{ mt: 2 }}
-          component={motion.button}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -403,7 +421,7 @@ const AudioGallery: React.FC = () => {
           sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
         >
           <Audiotrack color="primary" />
-          {loading ? (
+          {currentLoading ? (
             <Box
               component="span"
               sx={{ display: 'flex', alignItems: 'center' }}
@@ -435,7 +453,7 @@ const AudioGallery: React.FC = () => {
       {(!isMobile || filterOpen) && renderFilterBar()}
 
       <AnimatePresence mode="wait">
-        {loading ? (
+        {currentLoading ? (
           <MotionBox
             key="loading"
             variants={staggerContainer}
@@ -448,7 +466,6 @@ const AudioGallery: React.FC = () => {
                 <Grid {...getGridItemSize()} key={item}>
                   <MotionBox
                     variants={fadeIn}
-                    component={Paper}
                     sx={{
                       borderRadius: 3,
                       overflow: 'hidden',
@@ -466,7 +483,6 @@ const AudioGallery: React.FC = () => {
                       <>
                         <Box sx={{ p: 2 }}>
                           <Skeleton variant="text" width="60%" height={24} />
-                          <Skeleton variant="text" width="40%" height={20} />
                           <Skeleton variant="text" width="80%" height={16} />
                         </Box>
                       </>
@@ -491,7 +507,7 @@ const AudioGallery: React.FC = () => {
                     <AudioCard
                       audio={audio}
                       index={index}
-                      onDelete={handleDelete}
+                      onDelete={mode === 'user' ? handleDelete : undefined}
                       compact={layout === 'compact'}
                     />
                   </motion.div>
@@ -502,7 +518,7 @@ const AudioGallery: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {sortedAudios.length === 0 && !loading && (
+      {sortedAudios.length === 0 && !currentLoading && (
         <MotionBox
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -520,9 +536,13 @@ const AudioGallery: React.FC = () => {
             No audio files found
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Try adjusting your search or filters
+            {searchTerm
+              ? 'Try adjusting your search or filters'
+              : mode === 'user'
+                ? 'Create your first audio to get started'
+                : 'No audio files are available yet'}
           </Typography>
-          {searchTerm && (
+          {searchTerm ? (
             <Button
               variant="outlined"
               sx={{ mt: 2 }}
@@ -533,11 +553,24 @@ const AudioGallery: React.FC = () => {
             >
               Clear Search
             </Button>
+          ) : (
+            mode === 'user' && (
+              <Button
+                variant="contained"
+                sx={{ mt: 2 }}
+                onClick={() => router.push('/flow/generate-audio')}
+                component={motion.button}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Create Audio
+              </Button>
+            )
           )}
         </MotionBox>
       )}
 
-      {totalPages > 1 && !loading && sortedAudios.length > 0 && (
+      {currentTotalPages > 1 && !currentLoading && sortedAudios.length > 0 && (
         <MotionBox
           display="flex"
           justifyContent="center"
@@ -547,14 +580,12 @@ const AudioGallery: React.FC = () => {
           transition={{ delay: 0.5 }}
         >
           <Pagination
-            count={totalPages}
-            page={page}
+            count={currentTotalPages}
+            page={currentPage}
             onChange={handlePageChange}
             color="primary"
             size={isMobile ? 'small' : 'medium'}
             siblingCount={isMobile ? 0 : 1}
-            component={motion.div}
-            whileHover={{ scale: 1.05 }}
             sx={{
               '& .MuiPaginationItem-root': {
                 transition: 'all 0.2s ease',

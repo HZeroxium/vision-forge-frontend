@@ -1,3 +1,5 @@
+// /src/app/media/images/[id]/page.tsx
+
 'use client'
 
 import React, { useEffect, useState, useRef } from 'react'
@@ -228,7 +230,6 @@ export default function ImageDetailPage() {
 
           <MotionTypography
             variant="h5"
-            component="h1"
             sx={{
               flexGrow: 1,
               display: { xs: 'none', sm: 'block' },
