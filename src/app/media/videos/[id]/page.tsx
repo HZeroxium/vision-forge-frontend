@@ -19,6 +19,7 @@ import {
   Chip,
   alpha,
   Stack,
+  Alert,
 } from '@mui/material'
 import Grid from '@mui/material/Grid2'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -42,6 +43,7 @@ import {
   Schedule,
   HighQuality,
   Settings,
+  YouTube, // Thêm icon YouTube
 } from '@mui/icons-material'
 import { fetchVideo } from '@services/videoService'
 import type { Video } from '@services/videoService'
@@ -81,10 +83,14 @@ export default function VideoDetailPage() {
   const [videoLoaded, setVideoLoaded] = useState(false)
   const [videoError, setVideoError] = useState<string | null>(null)
 
+  // Upload to YouTube states
+  const [uploading, setUploading] = useState<boolean>(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [youtubeUrl, setYoutubeUrl] = useState<string | null>(null)
+
   useEffect(() => {
     if (!id) return
     setLoading(true)
-    // Fetch video details using the provided id
     fetchVideo(Array.isArray(id) ? id[0] : id)
       .then((data) => {
         setVideo(data)
@@ -98,7 +104,6 @@ export default function VideoDetailPage() {
       })
   }, [id])
 
-  // Handle video player events
   useEffect(() => {
     const videoElement = videoRef.current
     if (!videoElement) return
@@ -134,7 +139,6 @@ export default function VideoDetailPage() {
     }
   }, [video])
 
-  // Toggle fullscreen
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement)
@@ -146,7 +150,6 @@ export default function VideoDetailPage() {
     }
   }, [])
 
-  // Hide controls after inactivity
   useEffect(() => {
     let timeout: NodeJS.Timeout
 
@@ -182,7 +185,6 @@ export default function VideoDetailPage() {
     }
   }, [isPlaying])
 
-  // Navigate back to the gallery page
   const handleBack = () => {
     router.push('/media/videos')
   }
@@ -222,7 +224,6 @@ export default function VideoDetailPage() {
 
   const toggleBookmark = () => {
     setIsBookmarked(!isBookmarked)
-    // Here you'd typically save this to a database or localStorage
   }
 
   const handleCopyVideoId = () => {
@@ -254,10 +255,14 @@ export default function VideoDetailPage() {
         })
         .catch((err) => console.error('Error sharing:', err))
     } else {
-      // Fallback for browsers that don't support navigator.share
       handleCopyVideoId()
     }
   }
+
+  const handleRedirectToUpload = () => {
+    if (!id) return
+    router.push('/media/videos/uploadYoutube/${id}'); // Chuyển hướng đến trang /uploadYoutube
+  };
 
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60)
@@ -330,6 +335,7 @@ export default function VideoDetailPage() {
     )
   }
 
+  
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <MotionBox
@@ -366,7 +372,7 @@ export default function VideoDetailPage() {
 
           <MotionTypography
             variant="h5"
-            component="h1"
+            // component="h1"
             sx={{
               flexGrow: 1,
               display: { xs: 'none', sm: 'block' },
@@ -379,7 +385,6 @@ export default function VideoDetailPage() {
 
         {video && (
           <Grid container spacing={3}>
-            {/* Main Player Section */}
             <Grid size={{ xs: 12 }}>
               <MotionPaper
                 variants={fadeIn}
@@ -392,17 +397,15 @@ export default function VideoDetailPage() {
                   backgroundColor: '#000',
                 }}
               >
-                {/* Video Player Container */}
                 <Box
                   ref={playerContainerRef}
                   sx={{
                     position: 'relative',
-                    paddingTop: '56.25%', // 16:9 aspect ratio
+                    paddingTop: '56.25%',
                     cursor: showControls ? 'default' : 'none',
                   }}
                   onClick={togglePlay}
                 >
-                  {/* Video Element */}
                   <Box
                     sx={{
                       position: 'absolute',
@@ -425,7 +428,6 @@ export default function VideoDetailPage() {
                       preload="metadata"
                     />
 
-                    {/* Loading Overlay */}
                     {!videoLoaded && (
                       <Box
                         sx={{
@@ -445,7 +447,6 @@ export default function VideoDetailPage() {
                       </Box>
                     )}
 
-                    {/* Video Error Message */}
                     {videoError && (
                       <Box
                         sx={{
@@ -481,7 +482,6 @@ export default function VideoDetailPage() {
                       </Box>
                     )}
 
-                    {/* Big Play Button (when paused) */}
                     {!isPlaying && videoLoaded && (
                       <MotionBox
                         initial={{ opacity: 0, scale: 0.8 }}
@@ -509,7 +509,6 @@ export default function VideoDetailPage() {
                       </MotionBox>
                     )}
 
-                    {/* Video Controls Overlay */}
                     <AnimatePresence>
                       {showControls && videoLoaded && (
                         <MotionBox
@@ -530,7 +529,6 @@ export default function VideoDetailPage() {
                           }}
                           onClick={(e) => e.stopPropagation()}
                         >
-                          {/* Progress Bar */}
                           <Box sx={{ width: '100%', mb: 1 }}>
                             <Box
                               sx={{
@@ -575,7 +573,6 @@ export default function VideoDetailPage() {
                             </Box>
                           </Box>
 
-                          {/* Controls Row */}
                           <Stack
                             direction="row"
                             justifyContent="space-between"
@@ -683,7 +680,6 @@ export default function VideoDetailPage() {
               </MotionPaper>
             </Grid>
 
-            {/* Metadata Section */}
             <Grid size={{ xs: 12 }}>
               <MotionPaper
                 variants={fadeIn}
@@ -742,15 +738,16 @@ export default function VideoDetailPage() {
                     </IconButton>
                   </Typography>
                   <Typography variant="body2" paragraph>
-                    <strong>Status:</strong>{' '}
+                    <strong>Status:
                     <Chip
                       label={video.status}
                       size="small"
                       color={
                         video.status === 'completed' ? 'success' : 'warning'
                       }
-                      sx={{ ml: 1 }}
+                      sx={{ ml: 1, display: 'inline-flex', alignItems: 'center'}}
                     />
+                    </strong>{' '}
                   </Typography>
                 </Box>
 
@@ -802,6 +799,33 @@ export default function VideoDetailPage() {
 
                 <Divider sx={{ my: 2 }} />
 
+                {/* Thêm thông báo trạng thái tải lên */}
+                {uploading && (
+                  <MotionBox
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    sx={{ mb: 2 }}
+                  >
+                    <Alert
+                      severity="info"
+                      icon={<CircularProgress size={20} />}
+                    >
+                      Uploading to YouTube...
+                    </Alert>
+                  </MotionBox>
+                )}
+
+                {uploadError && (
+                  <MotionBox
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    sx={{ mb: 2 }}
+                  >
+                    <Alert severity="error">{uploadError}</Alert>
+                  </MotionBox>
+                )}
+
+
                 <Box sx={{ mt: 'auto', display: 'flex', gap: 1 }}>
                   <MotionButton
                     variant="contained"
@@ -824,6 +848,17 @@ export default function VideoDetailPage() {
                     sx={{ bgcolor: 'action.hover' }}
                   >
                     <Share />
+                  </MotionIconButton>
+
+                  {/* Thêm nút Upload to YouTube */}
+                  <MotionIconButton
+                    color="secondary"
+                    onClick={handleRedirectToUpload}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    sx={{ bgcolor: 'action.hover' }}
+                  >
+                    <YouTube />
                   </MotionIconButton>
                 </Box>
               </MotionPaper>
