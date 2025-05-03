@@ -1,3 +1,5 @@
+// /src/components/navigation/Sidebar.tsx
+
 'use client'
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
@@ -19,6 +21,7 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
 
 // Custom components
 import SidebarContent, { RouteGroup } from './SidebarContent'
+import { Analytics } from '@mui/icons-material'
 
 // Create motion components
 const MotionBox = motion.create(Box)
@@ -33,6 +36,12 @@ const routes: RouteGroup[] = [
         path: '/dashboard',
         text: 'Dashboard',
         icon: <DashboardIcon />,
+        protected: true,
+      },
+      {
+        path: '/media/videos/uploadYoutube',
+        text: 'Youtube Analytics',
+        icon: <Analytics />,
         protected: true,
       },
     ],

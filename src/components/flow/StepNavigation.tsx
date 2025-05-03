@@ -1,17 +1,23 @@
 // src/components/flow/StepNavigation.tsx
+
 'use client'
-import React, { useState } from 'react'
-import { Box, Button, Snackbar, Alert, Tooltip } from '@mui/material'
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import React from 'react'
+import { Box, Button, Typography, useTheme } from '@mui/material'
+import { NavigateBefore, NavigateNext } from '@mui/icons-material'
+import { motion } from 'framer-motion'
+
+const MotionButton = motion(Button)
+const MotionBox = motion(Box)
 
 interface StepNavigationProps {
   currentStep: string
-  onPrevious?: () => void
-  onNext?: () => void
+  onPrevious: () => void
+  onNext: () => void
   disableNext?: boolean
   nextLabel?: string
-  isGeneratingImages?: boolean // New prop to handle image generation state
+  showNext?: boolean
+  showPrevious?: boolean
+  isGeneratingImages?: boolean
 }
 
 const StepNavigation: React.FC<StepNavigationProps> = ({
@@ -20,128 +26,138 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
   onNext,
   disableNext = false,
   nextLabel = 'Next Step',
-  isGeneratingImages = false, // Default value
+  showNext = true,
+  showPrevious = true,
+  isGeneratingImages = false,
 }) => {
-  const [showAlert, setShowAlert] = useState(false)
+  const theme = useTheme()
 
-  // Don't render buttons on video step
-  if (currentStep === 'videoGenerating' || currentStep === 'videoGenerated') {
-    return null
-  }
-
-  const handleDisabledClick = () => {
-    setShowAlert(true)
-  }
-
-  // Get step-specific alert message and tooltip content
-  const getAlertMessage = () => {
+  // Determine what step we're on for UI enhancements
+  const getStepName = (): string => {
     switch (currentStep) {
       case 'script':
-        return 'Please generate a script before proceeding to the next step.'
+        return 'Script Creation'
       case 'images':
-        return isGeneratingImages
-          ? 'Please wait until the images have finished generating.'
-          : 'Please wait for image generation to complete before proceeding.'
+        return 'Image Generation'
       case 'audio':
-        return 'Please configure audio settings before generating the video.'
+        return 'Audio Configuration'
+      case 'videoGenerating':
+        return 'Video Generation'
+      case 'videoGenerated':
+        return 'Video Preview'
+      case 'socialUpload':
+        return 'Social Media Upload'
       default:
-        return 'Please complete the current step before proceeding.'
+        return ''
     }
-  }
-
-  const alertMessage = getAlertMessage()
-
-  // Determine if we should show a tooltip even when not disabled
-  const getTooltipContent = () => {
-    if (disableNext) return alertMessage
-
-    if (currentStep === 'images' && isGeneratingImages) {
-      return 'Images are still being generated. You can continue once they are ready.'
-    }
-
-    return null
-  }
-
-  const tooltipContent = getTooltipContent()
-
-  // Render the next button based on state
-  const renderNextButton = () => {
-    const button = (
-      <Button
-        variant="contained"
-        endIcon={<ArrowForwardIcon />}
-        onClick={disableNext ? handleDisabledClick : onNext}
-        sx={{
-          opacity: disableNext ? 0.7 : 1,
-          transition: 'all 0.2s ease',
-          '&:hover': disableNext
-            ? {
-                cursor: 'not-allowed',
-                opacity: 0.7,
-              }
-            : {
-                transform: 'translateY(-2px)',
-                boxShadow: 2,
-              },
-        }}
-      >
-        {nextLabel}
-      </Button>
-    )
-
-    // If we have tooltip content, wrap in Tooltip
-    if (tooltipContent) {
-      return (
-        <Tooltip title={tooltipContent} placement="top">
-          <span>{button}</span>
-        </Tooltip>
-      )
-    }
-
-    return button
   }
 
   return (
-    <Box
+    <MotionBox
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
       sx={{
         display: 'flex',
+        flexDirection: { xs: 'column', sm: 'row' },
         justifyContent: 'space-between',
+        alignItems: 'center',
         mt: 4,
-        mb: 2,
+        gap: 2,
       }}
     >
-      {currentStep !== 'script' && onPrevious ? (
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBackIcon />}
-          onClick={onPrevious}
-          sx={{
-            transition: 'all 0.2s ease',
-            '&:hover': {
-              transform: 'translateY(-2px)',
-              boxShadow: 1,
-            },
-          }}
-        >
-          Previous Step
-        </Button>
-      ) : (
-        <Box /> // Empty box for spacing when Previous button is not shown
-      )}
-
-      {onNext && renderNextButton()}
-
-      <Snackbar
-        open={showAlert}
-        autoHideDuration={4000}
-        onClose={() => setShowAlert(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{
+          display: { xs: 'none', md: 'block' },
+          fontWeight: 'medium',
+        }}
       >
-        <Alert severity="info" onClose={() => setShowAlert(false)}>
-          {alertMessage}
-        </Alert>
-      </Snackbar>
-    </Box>
+        Current Step:{' '}
+        <Typography component="span" color="secondary" fontWeight="bold">
+          {getStepName()}
+        </Typography>
+      </Typography>
+
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 2,
+          width: { xs: '100%', sm: 'auto' },
+          justifyContent: { xs: 'space-between', sm: 'flex-end' },
+        }}
+      >
+        {/* Previous button */}
+        {showPrevious ? (
+          <MotionButton
+            variant="outlined"
+            color="inherit"
+            onClick={onPrevious}
+            startIcon={<NavigateBefore />}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            sx={{
+              minWidth: { xs: '120px', sm: '100px' },
+              boxShadow: '0 2px 5px rgba(0,0,0,0.08)',
+              borderRadius: 2,
+            }}
+          >
+            Previous
+          </MotionButton>
+        ) : (
+          <Box sx={{ display: { xs: 'none', sm: 'block' } }} /> // Empty box for spacing on larger screens
+        )}
+
+        {/* Next button */}
+        {showNext && (
+          <MotionButton
+            variant="contained"
+            color="primary"
+            onClick={onNext}
+            endIcon={<NavigateNext />}
+            disabled={disableNext || isGeneratingImages}
+            whileHover={
+              !disableNext && !isGeneratingImages ? { scale: 1.05 } : undefined
+            }
+            whileTap={
+              !disableNext && !isGeneratingImages ? { scale: 0.95 } : undefined
+            }
+            sx={{
+              minWidth: { xs: '140px', sm: '120px' },
+              borderRadius: 2,
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            {isGeneratingImages ? 'Generating...' : nextLabel}
+            {isGeneratingImages && (
+              <Box
+                component={motion.div}
+                animate={{
+                  x: ['0%', '100%'],
+                  opacity: [0, 1, 0],
+                }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 1.5,
+                  ease: 'linear',
+                }}
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: `linear-gradient(90deg, transparent, ${theme.palette.primary.light}, transparent)`,
+                  zIndex: 0,
+                }}
+              />
+            )}
+          </MotionButton>
+        )}
+      </Box>
+    </MotionBox>
   )
 }
 

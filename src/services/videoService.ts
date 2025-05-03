@@ -13,6 +13,9 @@ export interface Video {
   thumbnailUrl?: string
   createdAt: string
   updatedAt: string
+  title?: string
+  description?: string
+  publishingHistoryId?: string // ID for YouTube publishing history
 }
 
 /**
