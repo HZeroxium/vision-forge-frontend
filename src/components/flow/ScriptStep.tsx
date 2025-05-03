@@ -20,6 +20,7 @@ import FactCheckIcon from '@mui/icons-material/FactCheck'
 import LoadingIndicator from '../common/LoadingIndicator'
 import SourcesList from './SourcesList'
 import { Source } from '@services/scriptsService'
+import { ContentStyleOption } from '@/app/flow/generate-video/page'
 
 interface ScriptStepProps {
   title: string
@@ -34,7 +35,7 @@ interface ScriptStepProps {
   onCreateScript: () => Promise<void>
   onUpdateScript: () => Promise<any>
   onProceedToImages: () => Promise<void>
-  contentStyleOptions: string[]
+  contentStyleOptions: ContentStyleOption[]
   languageOptions: { value: string; label: string }[]
   onReset: () => void
   isGeneratingScript?: boolean
@@ -103,8 +104,10 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
           onChange={(e) => setSelectedContentStyle(e.target.value)}
         >
           {contentStyleOptions.map((option) => (
-            <MenuItem key={option} value={option}>
-              {option.charAt(0).toUpperCase() + option.slice(1)}
+            <MenuItem key={option.displayValue} value={option.displayValue}>
+              {option.label ||
+                option.displayValue.charAt(0).toUpperCase() +
+                  option.displayValue.slice(1)}
             </MenuItem>
           ))}
         </Select>

@@ -19,6 +19,7 @@ import {
   getVideoByScriptId,
 } from '@services/flowService'
 import { subscribeToJobProgress, JobProgress } from '@utils/sse'
+import { Source } from '@/services/scriptsService'
 
 /**
  * Define the steps of the flow.
@@ -29,6 +30,18 @@ import { subscribeToJobProgress, JobProgress } from '@utils/sse'
  * 'videoGenerated'  - Video is generated and preview is shown.
  */
 type Step = 'script' | 'images' | 'audio' | 'videoGenerating' | 'videoGenerated'
+
+export interface ContentStyleOption {
+  displayValue: string
+  backendValue: string
+  label?: string // Optional friendly label for display
+}
+
+const contentStyleMapping: ContentStyleOption[] = [
+  { displayValue: 'default', backendValue: 'phổ thông', label: 'Default' },
+  { displayValue: 'child', backendValue: 'trẻ em', label: 'Child-Friendly' },
+  { displayValue: 'in-depth', backendValue: 'chuyên gia', label: 'In-Depth' },
+]
 
 export default function GenerateVideoFlowPage() {
   // Step management state
@@ -102,13 +115,30 @@ export default function GenerateVideoFlowPage() {
   }, [])
 
   // Dropdown options
-  const contentStyleOptions = ['default', 'child', 'professional', 'in-depth']
+  const contentStyleOptions = contentStyleMapping
+
+  // Function to get backend value from display value
+  const getBackendValue = (displayValue: string): string => {
+    const option = contentStyleMapping.find(
+      (opt) => opt.displayValue === displayValue
+    )
+    return option?.backendValue || displayValue
+  }
+
+  // Function to get display value from backend value
+  const getDisplayValue = (backendValue: string): string => {
+    const option = contentStyleMapping.find(
+      (opt) => opt.backendValue === backendValue
+    )
+    return option?.displayValue || backendValue
+  }
+
   const languageOptions = [
-    { value: 'en', label: 'English' },
     { value: 'vi', label: 'Vietnamese' },
-    { value: 'es', label: 'Spanish' },
-    { value: 'fr', label: 'French' },
-    { value: 'de', label: 'German' },
+    { value: 'en', label: 'English (In development)' },
+    // { value: 'es', label: 'Spanish' },
+    // { value: 'fr', label: 'French' },
+    // { value: 'de', label: 'German' },
   ]
   const audioSpeedOptions = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4]
   const audioInstructionsOptions = ['Clear', 'Dramatic', 'Calm', 'Energetic']
@@ -167,7 +197,10 @@ export default function GenerateVideoFlowPage() {
     setLoading(true)
     setIsGeneratingScript(true)
     try {
-      await createScript({ title, style: selectedContentStyle })
+      await createScript({
+        title,
+        style: getBackendValue(selectedContentStyle),
+      })
     } catch (err: any) {
       setError('Failed to create script')
     } finally {
@@ -424,7 +457,7 @@ export default function GenerateVideoFlowPage() {
 
     setTitle('')
     setSelectedContentStyle('default')
-    setSelectedLanguage('en')
+    setSelectedLanguage('vi')
     setLocalContent('')
     setImagesData(null)
     setVideoUrl(null)
