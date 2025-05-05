@@ -56,7 +56,7 @@ const routes: RouteGroup[] = [
         protected: true,
       },
       {
-        path: '/flow/advanced',
+        path: '/dev/tools',
         text: 'Advanced Tools',
         icon: <AutoAwesomeIcon />,
         protected: true,
@@ -173,7 +173,6 @@ const Sidebar = () => {
       {/* Desktop drawer - permanent but can be collapsed */}
       {!isMobile && (
         <MotionBox
-          component="aside"
           initial={false}
           animate={open ? 'open' : 'closed'}
           variants={drawerVariants}

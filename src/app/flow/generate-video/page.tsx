@@ -1,4 +1,5 @@
 // src/app/flow/generate-video/page.tsx
+
 'use client'
 import React, { useState, useEffect, useRef } from 'react'
 import { Container, Typography, Box, Paper } from '@mui/material'
@@ -21,6 +22,7 @@ import {
 } from '@services/flowService'
 import { subscribeToJobProgress, JobProgress } from '@utils/sse'
 import { Source } from '@/services/scriptsService'
+import { useRouter } from 'next/router'
 
 /**
  * Define the steps of the flow.
@@ -52,6 +54,8 @@ const contentStyleMapping: ContentStyleOption[] = [
 ]
 
 export default function GenerateVideoFlowPage() {
+  // const router = useRouter()
+
   // Step management state
   const [step, setStep] = useState<Step>('script')
   const [previousStep, setPreviousStep] = useState<Step | null>(null)

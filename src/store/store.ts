@@ -10,6 +10,8 @@ import audiosReducer from './audiosSlice'
 import scriptsReducer from './scriptsSlice'
 import publisherReducer from './publisherSlice'
 import youtubeReducer from './youtubeSlice'
+import storageReducer from './storageSlice'
+import pineconeReducer from './pineconeSlice'
 
 const store = configureStore({
   reducer: {
@@ -21,6 +23,8 @@ const store = configureStore({
     scripts: scriptsReducer,
     publisher: publisherReducer,
     youtube: youtubeReducer,
+    storage: storageReducer,
+    pinecone: pineconeReducer,
   },
   // Optional: middleware, devTools, etc.
 })
