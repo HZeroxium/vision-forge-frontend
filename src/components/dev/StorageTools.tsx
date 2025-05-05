@@ -59,10 +59,13 @@ export default function StorageTools() {
   const storage = useStorage()
 
   // State for file operations
+  const [copied, setCopied] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [uploadPath, setUploadPath] = useState('')
+  const [customFilename, setCustomFilename] = useState('') // New state for custom filename
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null)
   const [uploadSuccess, setUploadSuccess] = useState(false)
+  const [filenameError, setFilenameError] = useState<string | null>(null) // New state for filename validation
 
   // State for listing files
   const [listPath, setListPath] = useState('')
@@ -103,33 +106,70 @@ export default function StorageTools() {
   // Handle file input change
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
-      setFile(event.target.files[0])
+      const selectedFile = event.target.files[0]
+      setFile(selectedFile)
+
+      // Auto-populate the custom filename field with the original filename
+      // This provides a good starting point for customization
+      setCustomFilename(selectedFile.name)
+
       storage.clearErrors() // Clear previous errors
+      setFilenameError(null) // Clear filename errors
       setUploadSuccess(false)
       setUploadedUrl(null)
     }
   }
 
-  // Handle file upload
+  // Validate the custom filename
+  const validateFilename = (filename: string): boolean => {
+    if (!filename.trim()) {
+      setFilenameError('Filename cannot be empty')
+      return false
+    }
+
+    // Check for invalid characters in filename
+    const invalidChars = /[\\/:*?"<>|]/
+    if (invalidChars.test(filename)) {
+      setFilenameError(
+        'Filename contains invalid characters: \\ / : * ? " < > |'
+      )
+      return false
+    }
+
+    setFilenameError(null)
+    return true
+  }
+
+  // Handle file upload with custom filename
   const handleUpload = async () => {
     if (!file) {
       showNotification('Please select a file first', 'error')
       return
     }
 
+    // Validate the custom filename if provided
+    if (customFilename && !validateFilename(customFilename)) {
+      showNotification('Invalid filename', 'error')
+      return
+    }
+
     try {
       const folder = uploadPath.trim() || undefined
+
+      // Use the custom filename if provided, otherwise pass undefined to use the default
+      const filenameToUse = customFilename.trim() || undefined
 
       const response = await storage.uploadFile(
         file,
         FileType.OTHER,
-        undefined,
+        filenameToUse,
         folder
       )
 
       setUploadedUrl(response.url)
       setUploadSuccess(true)
       setFile(null)
+      setCustomFilename('') // Clear the custom filename field
 
       const fileInput = document.getElementById(
         'file-upload'
@@ -339,6 +379,21 @@ export default function StorageTools() {
                 />
 
                 <TextField
+                  label="Custom Filename (optional)"
+                  variant="outlined"
+                  fullWidth
+                  value={customFilename}
+                  onChange={(e) => setCustomFilename(e.target.value)}
+                  placeholder="e.g. my-custom-filename.jpg"
+                  helperText={
+                    filenameError ||
+                    "Leave empty to use the file's original name"
+                  }
+                  error={!!filenameError}
+                  disabled={!file}
+                />
+
+                <TextField
                   label="Storage Path (optional)"
                   variant="outlined"
                   fullWidth
@@ -360,7 +415,7 @@ export default function StorageTools() {
                   variant="contained"
                   color="primary"
                   onClick={handleUpload}
-                  disabled={!file || storage.isUploading}
+                  disabled={!file || storage.isUploading || !!filenameError}
                   startIcon={
                     storage.isUploading ? (
                       <CircularProgress size={20} />
@@ -729,7 +784,4 @@ export default function StorageTools() {
       </Snackbar>
     </Box>
   )
-}
-function setCopied(arg0: boolean): void {
-  throw new Error('Function not implemented.')
 }
