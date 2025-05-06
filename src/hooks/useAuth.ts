@@ -1,102 +1,105 @@
 // src/hooks/useAuth.ts
-import { useEffect, useState } from 'react'
-import * as authService from '../services/authService'
-import { User } from '../services/authService'
+import { useEffect } from 'react'
+import { useAppDispatch, useAppSelector } from '@store/store'
+import {
+  loginAsync,
+  registerAsync,
+  logout as logoutAction,
+  forgotPasswordAsync,
+  resetPasswordAsync,
+  changePasswordAsync,
+  fetchUserProfile,
+  updateProfileAsync,
+  clearError as clearErrorAction,
+} from '@store/authSlice'
+import type { UpdateProfileDto } from '@services/userService'
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState<boolean>(false)
-  const [error, setError] = useState<string | null>(null)
+  const dispatch = useAppDispatch()
+  const { user, loading, error } = useAppSelector((state) => state.auth)
 
   const login = async (email: string, password: string) => {
-    setLoading(true)
-    setError(null)
     try {
-      const data = await authService.login({ email, password })
-      // Save token in localStorage
-      localStorage.setItem('token', data.access_token)
-      // Fetch user profile
-      const profile = await authService.getProfile()
-      setUser(profile)
+      await dispatch(loginAsync({ email, password })).unwrap()
+      return true
     } catch (err) {
-      setError('Login failed. Please check your credentials.')
-    } finally {
-      setLoading(false)
+      return false
     }
   }
 
-  const register = async (email: string, password: string, name?: string) => {
-    setLoading(true)
-    setError(null)
+  const register = async (
+    email: string,
+    password: string,
+    name?: string,
+    description?: string
+  ) => {
     try {
-      const newUser = await authService.register({ email, password, name })
-      setUser(newUser)
+      await dispatch(
+        registerAsync({ email, password, name, description })
+      ).unwrap()
+      return true
     } catch (err) {
-      setError('Registration failed. Email might already be registered.')
-    } finally {
-      setLoading(false)
+      return false
     }
   }
 
   const logout = () => {
-    localStorage.removeItem('token')
-    setUser(null)
+    dispatch(logoutAction())
   }
 
   const forgotPassword = async (email: string) => {
-    setLoading(true)
     try {
-      const response = await authService.forgotPassword(email)
-      return response // Return the response
+      await dispatch(forgotPasswordAsync({ email })).unwrap()
+      return true
     } catch (err) {
-      setError('Forgot password request failed.')
-    } finally {
-      setLoading(false)
+      return false
     }
   }
 
   const resetPassword = async (token: string, newPassword: string) => {
-    setLoading(true)
     try {
-      const response = await authService.resetPassword(token, newPassword)
-      return response
+      await dispatch(resetPasswordAsync({ token, newPassword })).unwrap()
+      return true
     } catch (err) {
-      setError('Reset password failed.')
-    } finally {
-      setLoading(false)
+      return false
     }
   }
 
   const changePassword = async (oldPassword: string, newPassword: string) => {
-    setLoading(true)
     try {
-      const response = await authService.changePassword(
-        oldPassword,
-        newPassword
-      )
-      return response
+      await dispatch(changePasswordAsync({ oldPassword, newPassword })).unwrap()
+      return true
     } catch (err) {
-      setError('Change password failed.')
-    } finally {
-      setLoading(false)
+      return false
+    }
+  }
+
+  const updateProfile = async (profileData: UpdateProfileDto) => {
+    try {
+      await dispatch(updateProfileAsync(profileData)).unwrap()
+      return true
+    } catch (err) {
+      return false
     }
   }
 
   const loadProfile = async () => {
-    setLoading(true)
     try {
-      const profile = await authService.getProfile()
-      setUser(profile)
+      await dispatch(fetchUserProfile()).unwrap()
+      return true
     } catch (err) {
-      setError('Failed to load profile.')
-    } finally {
-      setLoading(false)
+      return false
     }
   }
 
+  const clearError = () => {
+    dispatch(clearErrorAction())
+  }
+
+  // Initialize auth state when component mounts
   useEffect(() => {
     const token = localStorage.getItem('token')
-    if (token) {
+    if (token && !user) {
       loadProfile()
     }
   }, [])
@@ -105,12 +108,15 @@ export const useAuth = () => {
     user,
     loading,
     error,
+    isAuthenticated: !!user,
     login,
     register,
     logout,
     forgotPassword,
     resetPassword,
     changePassword,
+    updateProfile,
     loadProfile,
+    clearError,
   }
 }

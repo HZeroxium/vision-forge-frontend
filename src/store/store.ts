@@ -12,6 +12,7 @@ import publisherReducer from './publisherSlice'
 import youtubeReducer from './youtubeSlice'
 import storageReducer from './storageSlice'
 import pineconeReducer from './pineconeSlice'
+import usersReducer from './userSlice' // Add this import
 
 const store = configureStore({
   reducer: {
@@ -25,6 +26,7 @@ const store = configureStore({
     youtube: youtubeReducer,
     storage: storageReducer,
     pinecone: pineconeReducer,
+    users: usersReducer, // Add users reducer
   },
   // Optional: middleware, devTools, etc.
 })

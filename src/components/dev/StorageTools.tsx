@@ -33,13 +33,10 @@ import {
   Folder,
   Search,
   Refresh,
-  Visibility,
   CloudDownload,
   Link as LinkIcon,
   ContentCopy,
-  Check,
   OpenInNew,
-  CreateNewFolder,
 } from '@mui/icons-material'
 import { useStorage } from '@/hooks/useStorage'
 import { FileType } from '@/services/storageService'

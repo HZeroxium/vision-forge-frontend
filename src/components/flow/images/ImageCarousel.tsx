@@ -69,22 +69,34 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
           >
             {isRegeneratingImages || loadingImages[currentImageIndex] ? (
               <ImageSkeleton
-                height={isFullscreen ? 500 : 350}
+                height={isFullscreen ? '100%' : 350}
                 width={isFullscreen ? '100%' : { xs: '100%', md: '60%' }}
               />
             ) : (
-              <CardMedia
-                component="img"
-                image={imageUrls[currentImageIndex]}
-                alt={`Generated ${currentImageIndex + 1}`}
+              <Box
                 sx={{
-                  height: isFullscreen ? 500 : 350,
-                  objectFit: 'cover',
                   width: isFullscreen ? '100%' : { xs: '100%', md: '60%' },
-                  transition: 'all 0.3s ease',
+                  aspectRatio: '1/1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  backgroundColor: theme.palette.grey[100],
                 }}
-                onLoad={() => onImageLoad(currentImageIndex)}
-              />
+              >
+                <CardMedia
+                  component="img"
+                  image={imageUrls[currentImageIndex]}
+                  alt={`Generated ${currentImageIndex + 1}`}
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    transition: 'all 0.3s ease',
+                  }}
+                  onLoad={() => onImageLoad(currentImageIndex)}
+                />
+              </Box>
             )}
             <IconButton
               sx={{
