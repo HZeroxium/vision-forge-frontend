@@ -21,7 +21,12 @@ export const useScripts = () => {
 
   // Memoized function to create script
   const createScript = useCallback(
-    (data: { title: string; style?: string; language?: string }) => {
+    (data: {
+      title: string
+      style?: string
+      language?: string
+      includePersonalDescription?: boolean
+    }) => {
       const action = dispatch(createScriptAsync(data))
       // Return the promise from the async thunk
       return action.unwrap()

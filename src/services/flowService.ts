@@ -12,6 +12,7 @@ export interface AudioConfig {
 export interface ImagesScripts {
   image_urls: string[]
   scripts: string[]
+  prompts: string[]
 }
 
 export interface AudioPreview {

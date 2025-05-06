@@ -56,7 +56,15 @@ const initialState: ScriptState = {
  */
 export const createScriptAsync = createAsyncThunk(
   'scripts/createScript',
-  async (data: { title: string; style?: string }, { rejectWithValue }) => {
+  async (
+    data: {
+      title: string
+      style?: string
+      language?: string
+      includePersonalDescription?: boolean
+    },
+    { rejectWithValue }
+  ) => {
     try {
       const script = await scriptService.createScript(data)
       return script

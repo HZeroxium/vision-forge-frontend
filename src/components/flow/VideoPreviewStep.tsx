@@ -64,30 +64,6 @@ const VideoPreviewStep: React.FC<VideoPreviewStepProps> = ({
     }
   }, [videoError, videoUrl, videoLoadAttempts])
 
-  // Progress status message based on job state
-  const getStatusMessage = () => {
-    if (!jobProgress) return 'Preparing to generate video...'
-
-    switch (jobProgress.state) {
-      case 'waiting':
-        return 'Waiting in queue...'
-      case 'active':
-        if (progressPercent <= 10)
-          return 'Validating script and preparing resources...'
-        if (progressPercent <= 40) return 'Generating audio narration...'
-        if (progressPercent <= 70) return 'Creating images from prompts...'
-        return 'Assembling final video with motion effects...'
-      case 'completed':
-        return videoUrl
-          ? 'Video generation complete!'
-          : 'Finalizing video, please wait...'
-      case 'failed':
-        return `Failed: ${jobProgress.error || 'Unknown error'}`
-      default:
-        return 'Processing...'
-    }
-  }
-
   const handleVideoError = () => {
     console.error('Video loading failed')
     setVideoError('Failed to load the video. Please try again.')
@@ -106,7 +82,7 @@ const VideoPreviewStep: React.FC<VideoPreviewStepProps> = ({
         {showVideo ? 'Video Generated' : 'Generating Video'}
       </Typography>
 
-      {/* Progress Display Section */}
+      {/* Progress Display Section - Simplified */}
       {showProgress && (
         <Paper
           elevation={1}
@@ -119,14 +95,20 @@ const VideoPreviewStep: React.FC<VideoPreviewStepProps> = ({
           }}
         >
           <Stack spacing={2}>
-            <Typography variant="body1" align="center">
-              {getStatusMessage()}
+            <Typography variant="body1" align="center" fontWeight="medium">
+              {progressPercent}% Complete
             </Typography>
 
             <LinearProgress
               variant="determinate"
               value={progressPercent}
-              sx={{ height: 8, borderRadius: 4 }}
+              sx={{
+                height: 12,
+                borderRadius: 6,
+                '& .MuiLinearProgress-bar': {
+                  transition: 'transform 0.5s ease',
+                },
+              }}
             />
 
             <Box
@@ -141,7 +123,11 @@ const VideoPreviewStep: React.FC<VideoPreviewStepProps> = ({
                 <CircularProgress size={16} thickness={6} />
               )}
               <Typography variant="body2" color="text.secondary">
-                {progressPercent}% complete
+                {jobProgress?.state === 'waiting'
+                  ? 'Waiting in queue...'
+                  : jobProgress?.state === 'failed'
+                    ? 'Generation failed'
+                    : 'Processing your video...'}
               </Typography>
             </Box>
 

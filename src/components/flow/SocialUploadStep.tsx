@@ -19,9 +19,21 @@ import {
   Stack,
   Tabs,
   Tab,
+  Card,
+  CardContent,
+  Grid,
 } from '@mui/material'
 import { motion } from 'framer-motion'
-import { YouTube, CloudUpload, Check, Close } from '@mui/icons-material'
+import {
+  YouTube,
+  CloudUpload,
+  Check,
+  Close,
+  Home,
+  VideoLibrary,
+  Add,
+  Visibility,
+} from '@mui/icons-material'
 import { useYouTube } from '@hooks/useYouTube'
 import { useRouter } from 'next/navigation'
 
@@ -127,24 +139,25 @@ const SocialUploadStep: React.FC<SocialUploadStepProps> = ({
     }
   }
 
-  // Redirect to video details page if upload was successful
-  useEffect(() => {
-    if (uploadSuccess && youtubeUrl && publishingHistoryId) {
-      // Wait a bit to show success message before completing
-      const timer = setTimeout(() => {
-        onComplete()
-        router.push(`/media/videos/${videoId}`)
-      }, 2000)
-      return () => clearTimeout(timer)
+  // Navigation handlers
+  const goToHomePage = () => {
+    router.push('/')
+  }
+
+  const goToVideoDetails = () => {
+    if (videoId) {
+      router.push(`/media/videos/${videoId}`)
     }
-  }, [
-    uploadSuccess,
-    youtubeUrl,
-    publishingHistoryId,
-    videoId,
-    router,
-    onComplete,
-  ])
+  }
+
+  const goToVideoLibrary = () => {
+    router.push('/media/videos')
+  }
+
+  const startNewVideo = () => {
+    onComplete()
+    router.push('/flow/generate-video')
+  }
 
   return (
     <Box>
@@ -225,130 +238,121 @@ const SocialUploadStep: React.FC<SocialUploadStepProps> = ({
 
                 {uploadSuccess && (
                   <Alert severity="success" sx={{ mb: 3 }}>
-                    Video successfully uploaded to YouTube! Redirecting...
+                    Video successfully uploaded to YouTube!
                   </Alert>
                 )}
 
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    handleYoutubeUpload()
-                  }}
-                >
-                  <Stack spacing={3}>
-                    <TextField
-                      label="Title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      fullWidth
-                      required
-                      disabled={uploading || uploadSuccess}
-                    />
-
-                    <TextField
-                      label="Description"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      fullWidth
-                      multiline
-                      rows={3}
-                      disabled={uploading || uploadSuccess}
-                    />
-
-                    <TextField
-                      label="Tags (comma separated)"
-                      value={tags}
-                      onChange={(e) => setTags(e.target.value)}
-                      fullWidth
-                      helperText="E.g. ai, video, vision-forge"
-                      disabled={uploading || uploadSuccess}
-                    />
-
-                    <FormControl
-                      fullWidth
-                      disabled={uploading || uploadSuccess}
-                    >
-                      <InputLabel id="privacy-label">
-                        Privacy Setting
-                      </InputLabel>
-                      <Select
-                        labelId="privacy-label"
-                        value={privacyStatus}
-                        onChange={(e) =>
-                          setPrivacyStatus(
-                            e.target.value as 'private' | 'public' | 'unlisted'
-                          )
-                        }
-                        label="Privacy Setting"
-                      >
-                        <MenuItem value="private">Private</MenuItem>
-                        <MenuItem value="unlisted">Unlisted</MenuItem>
-                        <MenuItem value="public">Public</MenuItem>
-                      </Select>
-                      <FormHelperText>
-                        Who can view your video on YouTube
-                      </FormHelperText>
-                    </FormControl>
-
-                    {/* Upload progress */}
-                    {uploading && (
-                      <Box sx={{ width: '100%', mb: 1 }}>
-                        <Typography variant="body2" sx={{ mb: 1 }}>
-                          Uploading: {uploadProgress}%
-                        </Typography>
-                        <Box
-                          sx={{
-                            height: 10,
-                            borderRadius: 5,
-                            bgcolor: 'grey.200',
-                            overflow: 'hidden',
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              height: '100%',
-                              width: `${uploadProgress}%`,
-                              bgcolor: 'secondary.main',
-                              borderRadius: 5,
-                              transition: 'width 0.3s ease',
-                            }}
-                          />
-                        </Box>
-                      </Box>
-                    )}
-                  </Stack>
-
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      mt: 4,
+                {!uploadSuccess ? (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      handleYoutubeUpload()
                     }}
                   >
-                    <MotionButton
-                      variant="outlined"
-                      color="primary"
-                      onClick={onSkip}
-                      startIcon={<Close />}
-                      disabled={uploading}
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
-                    >
-                      Skip
-                    </MotionButton>
+                    <Stack spacing={3}>
+                      <TextField
+                        label="Title"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        fullWidth
+                        required
+                        disabled={uploading || uploadSuccess}
+                      />
 
-                    {uploadSuccess && youtubeUrl ? (
+                      <TextField
+                        label="Description"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        fullWidth
+                        multiline
+                        rows={3}
+                        disabled={uploading || uploadSuccess}
+                      />
+
+                      <TextField
+                        label="Tags (comma separated)"
+                        value={tags}
+                        onChange={(e) => setTags(e.target.value)}
+                        fullWidth
+                        helperText="E.g. ai, video, vision-forge"
+                        disabled={uploading || uploadSuccess}
+                      />
+
+                      <FormControl
+                        fullWidth
+                        disabled={uploading || uploadSuccess}
+                      >
+                        <InputLabel id="privacy-label">
+                          Privacy Setting
+                        </InputLabel>
+                        <Select
+                          labelId="privacy-label"
+                          value={privacyStatus}
+                          onChange={(e) =>
+                            setPrivacyStatus(
+                              e.target.value as
+                                | 'private'
+                                | 'public'
+                                | 'unlisted'
+                            )
+                          }
+                          label="Privacy Setting"
+                        >
+                          <MenuItem value="private">Private</MenuItem>
+                          <MenuItem value="unlisted">Unlisted</MenuItem>
+                          <MenuItem value="public">Public</MenuItem>
+                        </Select>
+                        <FormHelperText>
+                          Who can view your video on YouTube
+                        </FormHelperText>
+                      </FormControl>
+
+                      {uploading && (
+                        <Box sx={{ width: '100%', mb: 1 }}>
+                          <Typography variant="body2" sx={{ mb: 1 }}>
+                            Uploading: {uploadProgress}%
+                          </Typography>
+                          <Box
+                            sx={{
+                              height: 10,
+                              borderRadius: 5,
+                              bgcolor: 'grey.200',
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                height: '100%',
+                                width: `${uploadProgress}%`,
+                                bgcolor: 'secondary.main',
+                                borderRadius: 5,
+                                transition: 'width 0.3s ease',
+                              }}
+                            />
+                          </Box>
+                        </Box>
+                      )}
+                    </Stack>
+
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        mt: 4,
+                      }}
+                    >
                       <MotionButton
-                        variant="contained"
+                        variant="outlined"
                         color="primary"
-                        onClick={viewOnYoutube}
-                        startIcon={<YouTube />}
+                        onClick={onSkip}
+                        startIcon={<Close />}
+                        disabled={uploading}
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.97 }}
                       >
-                        View on YouTube
+                        Skip
                       </MotionButton>
-                    ) : (
+
                       <MotionButton
                         variant="contained"
                         color="primary"
@@ -366,9 +370,94 @@ const SocialUploadStep: React.FC<SocialUploadStepProps> = ({
                       >
                         {uploading ? 'Uploading...' : 'Upload to YouTube'}
                       </MotionButton>
-                    )}
+                    </Box>
+                  </form>
+                ) : (
+                  <Box>
+                    <Divider sx={{ my: 2 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        WHAT'S NEXT?
+                      </Typography>
+                    </Divider>
+
+                    <Box sx={{ mt: 3 }}>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} sm={6}>
+                          <Card variant="outlined">
+                            <CardContent>
+                              <MotionButton
+                                fullWidth
+                                variant="contained"
+                                color="primary"
+                                onClick={viewOnYoutube}
+                                startIcon={<YouTube />}
+                                whileHover={{ scale: 1.03 }}
+                                whileTap={{ scale: 0.97 }}
+                                sx={{ mb: 2 }}
+                              >
+                                View on YouTube
+                              </MotionButton>
+
+                              <MotionButton
+                                fullWidth
+                                variant="outlined"
+                                onClick={goToVideoDetails}
+                                startIcon={<Visibility />}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                              >
+                                View Video Details
+                              </MotionButton>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Card variant="outlined">
+                            <CardContent>
+                              <MotionButton
+                                fullWidth
+                                variant="contained"
+                                color="secondary"
+                                onClick={startNewVideo}
+                                startIcon={<Add />}
+                                whileHover={{ scale: 1.03 }}
+                                whileTap={{ scale: 0.97 }}
+                                sx={{ mb: 2 }}
+                              >
+                                Create New Video
+                              </MotionButton>
+
+                              <Box sx={{ display: 'flex', gap: 2 }}>
+                                <MotionButton
+                                  variant="outlined"
+                                  color="inherit"
+                                  onClick={goToHomePage}
+                                  startIcon={<Home />}
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  sx={{ flexGrow: 1 }}
+                                >
+                                  Home
+                                </MotionButton>
+                                <MotionButton
+                                  variant="outlined"
+                                  color="inherit"
+                                  onClick={goToVideoLibrary}
+                                  startIcon={<VideoLibrary />}
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  sx={{ flexGrow: 1 }}
+                                >
+                                  Library
+                                </MotionButton>
+                              </Box>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      </Grid>
+                    </Box>
                   </Box>
-                </form>
+                )}
               </Box>
             </TabPanel>
           </Paper>

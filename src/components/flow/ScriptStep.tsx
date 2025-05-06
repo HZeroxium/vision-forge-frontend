@@ -1,45 +1,62 @@
 // src/components/flow/ScriptStep.tsx
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Box,
-  TextField,
   Button,
+  TextField,
   Typography,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
+  CircularProgress,
+  Paper,
+  Chip,
+  Tooltip,
+  IconButton,
+  Checkbox,
+  FormControlLabel,
+  Divider,
   Snackbar,
   Alert,
-  Divider,
-  Paper,
 } from '@mui/material'
-import RestartAltIcon from '@mui/icons-material/RestartAlt'
-import FactCheckIcon from '@mui/icons-material/FactCheck'
-import LoadingIndicator from '../common/LoadingIndicator'
+import {
+  AddCircle as AddCircleIcon,
+  Delete as DeleteIcon,
+  Create as CreateIcon,
+  Person as PersonIcon,
+  Info as InfoIcon,
+  RestartAlt as RestartAltIcon,
+  FactCheck as FactCheckIcon,
+  Save as SaveIcon,
+  NavigateNext as NavigateNextIcon,
+} from '@mui/icons-material'
+import { motion } from 'framer-motion'
+import type { ContentStyleOption } from '@/app/flow/generate-video/page'
+import { Source } from '@/services/scriptsService'
 import SourcesList from './SourcesList'
-import { Source } from '@services/scriptsService'
-import { ContentStyleOption } from '@/app/flow/generate-video/page'
 
 interface ScriptStepProps {
   title: string
-  setTitle: (value: string) => void
+  setTitle: (title: string) => void
   selectedContentStyle: string
-  setSelectedContentStyle: (value: string) => void
+  setSelectedContentStyle: (style: string) => void
   selectedLanguage: string
-  setSelectedLanguage: (value: string) => void
+  setSelectedLanguage: (language: string) => void
   localContent: string
-  setLocalContent: (value: string) => void
+  setLocalContent: (content: string) => void
   scriptExists: boolean
   onCreateScript: () => Promise<void>
-  onUpdateScript: () => Promise<any>
-  onProceedToImages: () => Promise<void>
+  onUpdateScript: () => Promise<void>
+  onProceedToImages: () => void
   contentStyleOptions: ContentStyleOption[]
   languageOptions: { value: string; label: string }[]
   onReset: () => void
-  isGeneratingScript?: boolean
-  sources?: Source[] // Add sources prop
+  isGeneratingScript: boolean
+  sources: Source[]
+  includePersonalDescription: boolean
+  setIncludePersonalDescription: (include: boolean) => void
 }
 
 const ScriptStep: React.FC<ScriptStepProps> = ({
@@ -58,13 +75,15 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
   contentStyleOptions,
   languageOptions,
   onReset,
-  isGeneratingScript = false,
-  sources = [], // Default to empty array
+  isGeneratingScript,
+  sources = [],
+  includePersonalDescription,
+  setIncludePersonalDescription,
 }) => {
-  const [showNoScriptAlert, setShowNoScriptAlert] = useState(false)
   const [isUpdatingScript, setIsUpdatingScript] = useState(false)
   const [showUpdateSuccess, setShowUpdateSuccess] = useState(false)
   const [showUpdateError, setShowUpdateError] = useState(false)
+  const [showNoScriptAlert, setShowNoScriptAlert] = useState(false)
 
   const handleUpdateScript = async () => {
     console.log('Starting script update...')
@@ -73,111 +92,176 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
       console.log('Calling onUpdateScript...')
       await onUpdateScript()
       console.log('Script update completed')
-      // Thông báo thành công
       setShowUpdateSuccess(true)
     } catch (error) {
       console.error('Error updating script:', error)
-      // Thông báo lỗi
       setShowUpdateError(true)
     } finally {
       setIsUpdatingScript(false)
     }
   }
 
+  const handleLocalContentChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
+    setLocalContent(e.target.value)
+  }
+
+  const handleProceedToImages = () => {
+    if (!scriptExists) {
+      setShowNoScriptAlert(true)
+      return
+    }
+    onProceedToImages()
+  }
+
   const hasSources = sources && sources.length > 0
 
   return (
-    <Box display="flex" flexDirection="column" gap={2}>
-      <TextField
-        label="Title"
-        variant="outlined"
-        fullWidth
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-      />
-      <FormControl fullWidth>
-        <InputLabel id="content-style-label">Content Style</InputLabel>
-        <Select
-          labelId="content-style-label"
-          label="Content Style"
-          value={selectedContentStyle}
-          onChange={(e) => setSelectedContentStyle(e.target.value)}
-        >
-          {contentStyleOptions.map((option) => (
-            <MenuItem key={option.displayValue} value={option.displayValue}>
-              {option.label ||
-                option.displayValue.charAt(0).toUpperCase() +
-                  option.displayValue.slice(1)}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-      <FormControl fullWidth>
-        <InputLabel id="language-label">Language</InputLabel>
-        <Select
-          labelId="language-label"
-          label="Language"
-          value={selectedLanguage}
-          onChange={(e) => setSelectedLanguage(e.target.value)}
-        >
-          {languageOptions.map((lang) => (
-            <MenuItem key={lang.value} value={lang.value}>
-              {lang.label.toUpperCase()}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+    <Box>
+      <Typography variant="h6" gutterBottom>
+        Create Your Script
+      </Typography>
 
-      <Box display="flex" gap={2}>
-        <Button
-          variant="contained"
-          onClick={onCreateScript}
+      <Box sx={{ mb: 3 }}>
+        <TextField
+          label="Title"
           fullWidth
-          disabled={isGeneratingScript}
-          startIcon={
-            isGeneratingScript ? (
-              <LoadingIndicator isLoading={true} size={20} showAfterDelay={0} />
-            ) : null
-          }
-        >
-          {isGeneratingScript ? 'Generating...' : 'Generate Script'}
-        </Button>
-        <Button
-          variant="outlined"
-          color="secondary"
-          startIcon={<RestartAltIcon />}
-          onClick={onReset}
-          disabled={isGeneratingScript}
-        >
-          Reset Flow
-        </Button>
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          disabled={scriptExists}
+          sx={{ mb: 2 }}
+        />
+
+        <FormControl fullWidth sx={{ mb: 2 }}>
+          <InputLabel>Content Style</InputLabel>
+          <Select
+            value={selectedContentStyle}
+            onChange={(e) => setSelectedContentStyle(e.target.value)}
+            label="Content Style"
+            disabled={scriptExists}
+          >
+            {contentStyleOptions.map((option) => (
+              <MenuItem key={option.displayValue} value={option.displayValue}>
+                {option.label || option.displayValue}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl fullWidth sx={{ mb: 2 }}>
+          <InputLabel>Language</InputLabel>
+          <Select
+            value={selectedLanguage}
+            onChange={(e) => setSelectedLanguage(e.target.value)}
+            label="Language"
+            disabled={scriptExists}
+          >
+            {languageOptions.map((lang) => (
+              <MenuItem key={lang.value} value={lang.value}>
+                {lang.label.toUpperCase()}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <Tooltip title="When enabled, we'll use your profile information to create a more personalized script that matches your tone and preferences">
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={includePersonalDescription}
+                onChange={(e) =>
+                  setIncludePersonalDescription(e.target.checked)
+                }
+                disabled={isGeneratingScript || scriptExists}
+                color="primary"
+                icon={<PersonIcon />}
+                checkedIcon={<PersonIcon />}
+              />
+            }
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="body2">
+                  Include my profile description for personalization
+                </Typography>
+                <Tooltip title="Uses your profile description to tailor the script to your style">
+                  <IconButton size="small">
+                    <InfoIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            }
+            sx={{
+              mt: 1,
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          />
+        </Tooltip>
       </Box>
 
-      {isGeneratingScript && (
-        <Box display="flex" justifyContent="center" mt={2} mb={2}>
-          <LoadingIndicator
-            isLoading={true}
-            size={60}
-            message="AI is generating your script..."
-          />
-        </Box>
-      )}
+      {!scriptExists ? (
+        <Box display="flex" gap={2}>
+          <Tooltip title={!title ? 'Please enter a title first' : ''}>
+            <span style={{ width: '100%' }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={onCreateScript}
+                disabled={!title || isGeneratingScript}
+                startIcon={
+                  isGeneratingScript ? (
+                    <CircularProgress size={20} />
+                  ) : (
+                    <CreateIcon />
+                  )
+                }
+                sx={{ mb: 2, width: '100%' }}
+              >
+                {isGeneratingScript
+                  ? 'Generating Script...'
+                  : 'Generate Script'}
+              </Button>
+            </span>
+          </Tooltip>
 
-      {scriptExists && (
+          <Tooltip
+            title={
+              isGeneratingScript
+                ? 'Please wait for script generation to complete'
+                : ''
+            }
+          >
+            <span>
+              <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={<RestartAltIcon />}
+                onClick={onReset}
+                disabled={isGeneratingScript}
+                sx={{ mb: 2 }}
+              >
+                Reset Flow
+              </Button>
+            </span>
+          </Tooltip>
+        </Box>
+      ) : (
         <>
-          <Typography variant="subtitle1">
-            Script Content (Editable):
+          <Typography variant="subtitle1" gutterBottom>
+            Script Content
           </Typography>
           <TextField
-            label="Script Content"
-            variant="outlined"
-            fullWidth
             multiline
-            minRows={6}
+            fullWidth
+            minRows={8}
+            maxRows={16}
             value={localContent}
-            onChange={(e) => setLocalContent(e.target.value)}
+            onChange={handleLocalContentChange}
+            sx={{ mb: 2 }}
           />
 
+          {/* Fact Checked Content section */}
           {hasSources && (
             <Paper
               elevation={0}
@@ -205,34 +289,46 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
             </Paper>
           )}
 
-          <Box display="flex" gap={2} mt={2}>
-            <Button
-              variant="outlined"
-              onClick={handleUpdateScript}
-              disabled={isUpdatingScript}
-              startIcon={
-                isUpdatingScript ? (
-                  <LoadingIndicator
-                    isLoading={true}
-                    size={16}
-                    showAfterDelay={0}
-                  />
-                ) : null
-              }
-            >
-              {isUpdatingScript ? 'Updating...' : 'Update Script'}
-            </Button>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Tooltip
+                title={
+                  isUpdatingScript ? 'Saving changes...' : 'Save your changes'
+                }
+              >
+                <span>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    onClick={handleUpdateScript}
+                    disabled={isUpdatingScript}
+                    startIcon={
+                      isUpdatingScript ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        <SaveIcon />
+                      )
+                    }
+                  >
+                    {isUpdatingScript ? 'Updating...' : 'Update Script'}
+                  </Button>
+                </span>
+              </Tooltip>
+            </Box>
 
+            {/* Add the Proceed to Images button */}
             <Button
               variant="contained"
               color="primary"
-              onClick={onProceedToImages}
+              onClick={handleProceedToImages}
               disabled={isGeneratingScript || isUpdatingScript}
+              endIcon={<NavigateNextIcon />}
             >
               Proceed to Images
             </Button>
           </Box>
 
+          {/* Sources List */}
           {hasSources && (
             <>
               <Divider sx={{ my: 3 }} />

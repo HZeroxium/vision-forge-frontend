@@ -22,7 +22,7 @@ import {
 } from '@services/flowService'
 import { subscribeToJobProgress, JobProgress } from '@utils/sse'
 import { Source } from '@/services/scriptsService'
-import { useRouter } from 'next/router'
+import { useRouter } from 'next/navigation'
 
 /**
  * Define the steps of the flow.
@@ -54,7 +54,7 @@ const contentStyleMapping: ContentStyleOption[] = [
 ]
 
 export default function GenerateVideoFlowPage() {
-  // const router = useRouter()
+  const router = useRouter()
 
   // Step management state
   const [step, setStep] = useState<Step>('script')
@@ -69,6 +69,9 @@ export default function GenerateVideoFlowPage() {
   const [selectedLanguage, setSelectedLanguage] = useState('vi')
   const [localContent, setLocalContent] = useState('')
   const [sources, setSources] = useState<Source[]>([])
+  // Add state for profile description inclusion
+  const [includePersonalDescription, setIncludePersonalDescription] =
+    useState(false)
 
   // State for Step 2 – Images & Scripts Editing
   const [imagesData, setImagesData] = useState<{
@@ -216,6 +219,7 @@ export default function GenerateVideoFlowPage() {
       await createScript({
         title,
         style: getBackendValue(selectedContentStyle),
+        includePersonalDescription, // Include this preference in script creation
       })
     } catch (err: any) {
       setError('Failed to create script')
@@ -538,6 +542,8 @@ export default function GenerateVideoFlowPage() {
             onReset={handleReset}
             isGeneratingScript={isGeneratingScript}
             sources={sources}
+            includePersonalDescription={includePersonalDescription}
+            setIncludePersonalDescription={setIncludePersonalDescription}
           />
         </PageTransition>
 

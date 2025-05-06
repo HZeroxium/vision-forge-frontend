@@ -1,8 +1,11 @@
 // src/components/flow/ImagesStep.tsx
 'use client'
 import React, { useState, useEffect, useRef } from 'react'
-import { Box, Typography, Chip, Divider } from '@mui/material'
+import { Box, Typography, Chip, Divider, Paper, Collapse } from '@mui/material'
 import LoadingIndicator from '../common/LoadingIndicator'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 
 // Import extracted components
 import ImageCarousel from './images/ImageCarousel'
@@ -12,7 +15,11 @@ import ActionButtons from './images/ActionButtons'
 import Notifications from './images/Notifications'
 
 interface ImagesStepProps {
-  imagesData: { image_urls: string[]; scripts: string[] } | null
+  imagesData: {
+    image_urls: string[]
+    scripts: string[]
+    prompts?: string[] // Add optional prompts field
+  } | null
   onEditImageScript: (index: number, newScript: string) => void
   onRegenerateImages: () => Promise<void>
   onProceedToAudio: () => void
@@ -33,8 +40,8 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
   // Store the original scripts to detect changes
   const [originalScripts, setOriginalScripts] = useState<string[]>([])
   const [currentScripts, setCurrentScripts] = useState<string[]>([])
+  const [showPrompt, setShowPrompt] = useState<boolean>(false)
 
-  // Removed editedScripts state and use a computed value instead
   const [showSaveNotification, setShowSaveNotification] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -72,6 +79,11 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
 
   // Determine if any scripts have been edited
   const hasEditedScripts = editedScripts.some((edited) => edited)
+
+  // Set default prompts if they aren't provided
+  const promptsList =
+    imagesData?.prompts ||
+    Array(imagesData?.image_urls.length || 0).fill('Generated image')
 
   if (!imagesData || isGeneratingInitialImages) {
     return (
@@ -210,6 +222,40 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
       </Typography>
 
       <Divider sx={{ mb: 2 }} />
+
+      {/* Add Prompt Display */}
+      <Paper
+        variant="outlined"
+        sx={{
+          p: 1.5,
+          mb: 2,
+          borderRadius: 2,
+          cursor: 'pointer',
+          '&:hover': { bgcolor: 'action.hover' },
+          borderColor: showPrompt ? 'primary.main' : 'divider',
+          borderStyle: showPrompt ? 'solid' : 'dashed',
+        }}
+        onClick={() => setShowPrompt(!showPrompt)}
+      >
+        <Box display="flex" alignItems="center" justifyContent="space-between">
+          <Box display="flex" alignItems="center" gap={1}>
+            <AutoAwesomeIcon color="primary" fontSize="small" />
+            <Typography variant="subtitle2">Image Generation Prompt</Typography>
+          </Box>
+          {showPrompt ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+        </Box>
+
+        <Collapse in={showPrompt}>
+          <Box
+            sx={{ p: 1, mt: 1, bgcolor: 'background.default', borderRadius: 1 }}
+          >
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+              {promptsList[currentImageIndex] ||
+                'No prompt information available'}
+            </Typography>
+          </Box>
+        </Collapse>
+      </Paper>
 
       <ImageCarousel
         currentImageIndex={currentImageIndex}

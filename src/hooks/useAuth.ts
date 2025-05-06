@@ -34,9 +34,7 @@ export const useAuth = () => {
     description?: string
   ) => {
     try {
-      await dispatch(
-        registerAsync({ email, password, name, description })
-      ).unwrap()
+      await dispatch(registerAsync({ email, password, name })).unwrap()
       return true
     } catch (err) {
       return false

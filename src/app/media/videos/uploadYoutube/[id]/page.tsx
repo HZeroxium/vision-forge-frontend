@@ -57,6 +57,7 @@ export default function UploadYoutubePage() {
     youtubeUrl,
     publishingHistoryId,
     clearErrors,
+    resetUploadState,
   } = useYouTube()
 
   // Load video data when component mounts
@@ -86,6 +87,14 @@ export default function UploadYoutubePage() {
     }
   }, [id])
 
+  // Reset YouTube upload state when component unmounts
+  useEffect(() => {
+    return () => {
+      // This cleanup function runs when component unmounts
+      resetUploadState()
+    }
+  }, [resetUploadState])
+
   const handleUpload = async () => {
     if (!video) return
 
@@ -93,7 +102,7 @@ export default function UploadYoutubePage() {
       // Clear any previous errors
       clearErrors()
 
-      const result = await uploadVideo({
+      await uploadVideo({
         videoId: id,
         title,
         description,
@@ -120,17 +129,6 @@ export default function UploadYoutubePage() {
       window.open(youtubeUrl, '_blank')
     }
   }
-
-  // Redirect to video details page if upload was successful
-  useEffect(() => {
-    if (uploadSuccess && youtubeUrl && publishingHistoryId) {
-      // Redirect after a short delay to allow user to see success message
-      const timer = setTimeout(() => {
-        router.push(`/media/videos/${id}`)
-      }, 2000)
-      return () => clearTimeout(timer)
-    }
-  }, [uploadSuccess, youtubeUrl, publishingHistoryId, id, router])
 
   if (videoLoading) {
     return (
@@ -236,7 +234,7 @@ export default function UploadYoutubePage() {
 
           {uploadSuccess && (
             <Alert severity="success" sx={{ mb: 2 }}>
-              Video successfully uploaded to YouTube! Redirecting...
+              Video successfully uploaded to YouTube!
             </Alert>
           )}
 
@@ -325,40 +323,64 @@ export default function UploadYoutubePage() {
             )}
 
             <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
-              {uploadSuccess && youtubeUrl ? (
-                <MotionButton
-                  variant="contained"
-                  color="primary"
-                  fullWidth
-                  onClick={viewOnYoutube}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                >
-                  View on YouTube
-                </MotionButton>
+              {uploadSuccess ? (
+                <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
+                  <MotionButton
+                    variant="contained"
+                    color="primary"
+                    onClick={viewOnYoutube}
+                    fullWidth
+                    startIcon={<YouTube />}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    View on YouTube
+                  </MotionButton>
+                  <MotionButton
+                    variant="outlined"
+                    onClick={handleBack}
+                    fullWidth
+                    startIcon={<ArrowBack />}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    Back to Video
+                  </MotionButton>
+                </Box>
               ) : (
-                <MotionButton
-                  variant="contained"
-                  color="error"
-                  type="submit"
-                  disabled={uploading || !title}
-                  fullWidth
-                  startIcon={<CloudUpload />}
-                  whileHover={{ scale: !uploading ? 1.03 : 1 }}
-                  whileTap={{ scale: !uploading ? 0.97 : 1 }}
-                >
-                  {uploading ? 'Uploading...' : 'Upload to YouTube'}
-                </MotionButton>
+                <>
+                  <MotionButton
+                    variant="contained"
+                    color="error"
+                    type="submit"
+                    disabled={uploading || !title}
+                    fullWidth
+                    startIcon={uploading ? undefined : <CloudUpload />}
+                    whileHover={{ scale: !uploading ? 1.03 : 1 }}
+                    whileTap={{ scale: !uploading ? 0.97 : 1 }}
+                  >
+                    {uploading ? (
+                      <Box
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                      >
+                        <CircularProgress size={20} color="inherit" />
+                        <span>Uploading...</span>
+                      </Box>
+                    ) : (
+                      'Upload to YouTube'
+                    )}
+                  </MotionButton>
+                  <MotionButton
+                    variant="outlined"
+                    onClick={handleBack}
+                    disabled={uploading}
+                    whileHover={{ scale: !uploading ? 1.03 : 1 }}
+                    whileTap={{ scale: !uploading ? 0.97 : 1 }}
+                  >
+                    Cancel
+                  </MotionButton>
+                </>
               )}
-
-              <MotionButton
-                variant="outlined"
-                onClick={handleBack}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-              >
-                Cancel
-              </MotionButton>
             </Box>
           </Box>
         </MotionPaper>

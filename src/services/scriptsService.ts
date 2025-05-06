@@ -4,21 +4,21 @@ import api from './api'
 
 export interface Source {
   title: string
-  content: string
-  url: string
-  source_type: string
+  url?: string
+  content?: string
+  source_type?: string
 }
 
 export interface Script {
   id: string
+  userId: string
   title: string
   content: string
-  style: string
-  language: string
-  sources?: Source[]
+  sources: Source[]
+  style?: string
+  language?: string
   createdAt: string
   updatedAt: string
-  userId?: string
 }
 
 export interface ScriptsPaginationDto {
@@ -30,12 +30,13 @@ export interface ScriptsPaginationDto {
 }
 
 /**
- * Create a new script by providing title (and optional style).
+ * Create a new script
  */
 export const createScript = async (data: {
   title: string
   style?: string
   language?: string
+  includePersonalDescription?: boolean
 }): Promise<Script> => {
   const response = await api.post('/scripts', data)
   return response.data
