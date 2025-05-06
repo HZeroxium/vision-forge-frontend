@@ -1,11 +1,12 @@
 // src/components/flow/ImagesStep.tsx
 'use client'
-import React, { useState, useEffect, useRef } from 'react'
-import { Box, Typography, Chip, Divider, Paper, Collapse } from '@mui/material'
+import React, { useState, useEffect } from 'react'
+import { Box, Typography, Chip, Divider } from '@mui/material'
 import LoadingIndicator from '../common/LoadingIndicator'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import ExpandLessIcon from '@mui/icons-material/ExpandLess'
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import { useStorage } from '@hooks/useStorage'
+
+// Import types
+import { Block } from './types/BlockTypes'
 
 // Import extracted components
 import ImageCarousel from './images/ImageCarousel'
@@ -13,12 +14,17 @@ import ScriptEditor from './images/ScriptEditor'
 import ThumbnailGallery from './images/ThumbnailGallery'
 import ActionButtons from './images/ActionButtons'
 import Notifications from './images/Notifications'
+import PromptDisplay from './images/PromptDisplay'
+import ImageUploadDialog from './images/ImageUploadDialog'
+import AddBlockDialog from './images/AddBlockDialog'
+import CollapsibleBlockManager from './images/CollapsibleBlockManager'
+import { FileType } from '@/services/storageService'
 
 interface ImagesStepProps {
   imagesData: {
     image_urls: string[]
     scripts: string[]
-    prompts?: string[] // Add optional prompts field
+    prompts?: string[]
   } | null
   onEditImageScript: (index: number, newScript: string) => void
   onRegenerateImages: () => Promise<void>
@@ -37,54 +43,89 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
   isGeneratingInitialImages = false,
   onSaveAllScripts,
 }) => {
-  // Store the original scripts to detect changes
-  const [originalScripts, setOriginalScripts] = useState<string[]>([])
-  const [currentScripts, setCurrentScripts] = useState<string[]>([])
-  const [showPrompt, setShowPrompt] = useState<boolean>(false)
+  // Storage hook for uploading images
+  const storage = useStorage()
 
+  // State for blocks management
+  const [blocks, setBlocks] = useState<Block[]>([])
+  const [originalBlocks, setOriginalBlocks] = useState<Block[]>([])
+  const [blocksReordered, setBlocksReordered] = useState<boolean>(false)
+  const [originalScripts, setOriginalScripts] = useState<string[]>([])
+
+  // UI state
+  const [showPrompt, setShowPrompt] = useState<boolean>(false)
   const [showSaveNotification, setShowSaveNotification] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [loadingImages, setLoadingImages] = useState<boolean[]>([])
   const [showIncompleteAlert, setShowIncompleteAlert] = useState(false)
+  const [dragActiveId, setDragActiveId] = useState<string | null>(null)
 
+  // Image upload state
+  const [uploadDialogOpen, setUploadDialogOpen] = useState<boolean>(false)
+  const [uploadProgress, setUploadProgress] = useState<number>(0)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState<boolean>(false)
+
+  // Add block dialog state
+  const [addBlockDialogOpen, setAddBlockDialogOpen] = useState<boolean>(false)
+
+  // Changes tracking
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  // Initialize state when imagesData changes (like when first loading or regenerating)
+  // Initialize state when imagesData changes
   useEffect(() => {
     if (imagesData) {
-      // Only reset scripts when imagesData is first loaded or regenerated
-      if (
-        originalScripts.length === 0 ||
-        imagesData.scripts.length !== originalScripts.length
-      ) {
-        setOriginalScripts([...imagesData.scripts])
-        setCurrentScripts([...imagesData.scripts])
-      }
-      setLoadingImages(Array(imagesData.image_urls.length).fill(false))
-    }
-  }, [imagesData, originalScripts.length])
+      const isInitialLoad = blocks.length === 0
+      const hasLengthChanged = blocks.length !== imagesData.image_urls.length
 
+      if (isInitialLoad || hasLengthChanged || isRegeneratingImages) {
+        // Create new blocks from imagesData
+        const newBlocks: Block[] = imagesData.image_urls.map((url, index) => ({
+          id: `block-${index}`,
+          imageUrl: url,
+          script: imagesData.scripts[index] || '',
+          prompt: imagesData.prompts?.[index] || 'Generated image',
+        }))
+
+        setBlocks(newBlocks)
+        setOriginalBlocks(JSON.parse(JSON.stringify(newBlocks)))
+
+        // Store original scripts for comparison
+        setOriginalScripts([...imagesData.scripts])
+
+        // Initialize loading state for images
+        setLoadingImages(Array(imagesData.image_urls.length).fill(false))
+      }
+    }
+  }, [imagesData, isRegeneratingImages])
+
+  // Reset current image index if it's out of bounds
   useEffect(() => {
-    if (imagesData && currentImageIndex >= imagesData.image_urls.length) {
+    if (blocks.length > 0 && currentImageIndex >= blocks.length) {
       setCurrentImageIndex(0)
     }
-  }, [imagesData, currentImageIndex])
+  }, [blocks, currentImageIndex])
 
-  // Compute which scripts have been edited by comparing original to current
-  const editedScripts = currentScripts.map(
-    (script, index) => originalScripts[index] !== script
-  )
+  // Check which scripts have been edited compared to original
+  const getEditedScripts = (): boolean[] => {
+    return blocks.map((block, index) => {
+      // Find matching block by array index for more reliable comparison
+      const originalBlock = originalBlocks[index]
+      if (!originalBlock) return true // New block is considered edited
+      return originalBlock.script !== block.script
+    })
+  }
 
-  // Determine if any scripts have been edited
-  const hasEditedScripts = editedScripts.some((edited) => edited)
+  // Determine if any scripts have been edited or blocks reordered
+  const editedScripts = getEditedScripts()
+  const hasEditedScripts =
+    editedScripts.some((edited) => edited) ||
+    blocksReordered ||
+    blocks.length !== originalBlocks.length
 
-  // Set default prompts if they aren't provided
-  const promptsList =
-    imagesData?.prompts ||
-    Array(imagesData?.image_urls.length || 0).fill('Generated image')
-
+  // Show loading state when generating initial images
   if (!imagesData || isGeneratingInitialImages) {
     return (
       <Box
@@ -108,14 +149,17 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
     )
   }
 
+  // Handle script changes
   const handleScriptChange = (index: number, newScript: string) => {
-    // Call parent handler to update script in parent component
-    onEditImageScript(index, newScript)
+    // Update local state
+    const newBlocks = [...blocks]
+    newBlocks[index].script = newScript
+    setBlocks(newBlocks)
 
-    // Update our local state to track current scripts
-    const updatedScripts = [...currentScripts]
-    updatedScripts[index] = newScript
-    setCurrentScripts(updatedScripts)
+    // Call parent handler to update script in parent component
+    // We only notify parent of changes but we don't update our originalBlocks
+    // This allows us to maintain knowledge of what's changed
+    onEditImageScript(index, newScript)
 
     // Clear any previous save errors
     if (saveError) {
@@ -123,6 +167,7 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
     }
   }
 
+  // Handle saving all changes
   const handleSaveAllChanges = async () => {
     // Don't try to save if no changes or already saving
     if (!hasEditedScripts || isSaving) {
@@ -133,20 +178,27 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
     setSaveError(null)
 
     try {
+      // Extract scripts in current order to send to parent
+      const currentScripts = blocks.map((block) => block.script)
+
       // If the parent component provided a save function, use it
       if (onSaveAllScripts) {
         const success = await onSaveAllScripts(currentScripts)
 
         if (success) {
-          // After successful save, update original scripts to match current
+          // After successful save, update original state to match current
+          setOriginalBlocks(JSON.parse(JSON.stringify(blocks)))
           setOriginalScripts([...currentScripts])
+          setBlocksReordered(false)
           setShowSaveNotification(true)
         } else {
           setSaveError('Failed to save script changes')
         }
       } else {
-        // No save function provided, just update original scripts
-        setOriginalScripts([...currentScripts])
+        // No save function provided, just update original state
+        setOriginalBlocks(JSON.parse(JSON.stringify(blocks)))
+        setOriginalScripts(blocks.map((b) => b.script))
+        setBlocksReordered(false)
         setShowSaveNotification(true)
       }
     } catch (error) {
@@ -159,15 +211,16 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
     }
   }
 
+  // Navigation handlers
   const handlePrevImage = () => {
     setCurrentImageIndex((prevIndex) =>
-      prevIndex === 0 ? imagesData.image_urls.length - 1 : prevIndex - 1
+      prevIndex === 0 ? blocks.length - 1 : prevIndex - 1
     )
   }
 
   const handleNextImage = () => {
     setCurrentImageIndex((prevIndex) =>
-      prevIndex === imagesData.image_urls.length - 1 ? 0 : prevIndex + 1
+      prevIndex === blocks.length - 1 ? 0 : prevIndex + 1
     )
   }
 
@@ -186,7 +239,7 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
   }
 
   const handleRegenerateImagesClick = async () => {
-    setLoadingImages(Array(imagesData.image_urls.length).fill(true))
+    setLoadingImages(Array(blocks.length).fill(true))
     await onRegenerateImages()
   }
 
@@ -203,6 +256,129 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
     }
   }
 
+  // Block Management
+  const handleReorderBlocks = (newBlocks: Block[]) => {
+    setBlocks(newBlocks)
+    setBlocksReordered(true)
+  }
+
+  const handleDeleteBlock = (index: number) => {
+    // Don't delete if it's the only block
+    if (blocks.length <= 1) {
+      return
+    }
+
+    const newBlocks = [...blocks]
+    newBlocks.splice(index, 1)
+
+    // Update current index if needed
+    if (currentImageIndex >= newBlocks.length) {
+      setCurrentImageIndex(Math.max(0, newBlocks.length - 1))
+    }
+
+    setBlocks(newBlocks)
+    setBlocksReordered(true)
+  }
+
+  // Image Upload handlers
+  const handleOpenUploadDialog = () => {
+    setUploadDialogOpen(true)
+    setUploadProgress(0)
+    setUploadError(null)
+  }
+
+  const handleUploadImage = async (file: File) => {
+    setIsUploading(true)
+    setUploadProgress(0)
+    setUploadError(null)
+
+    try {
+      // Use storage hook to upload file
+      const result = await storage.uploadFile(
+        file,
+        FileType.IMAGE,
+        undefined,
+        'images/user-uploads/',
+        (progress) => setUploadProgress(progress)
+      )
+
+      // Replace the image URL in the current block
+      const newBlocks = [...blocks]
+      newBlocks[currentImageIndex] = {
+        ...newBlocks[currentImageIndex],
+        imageUrl: result.url,
+        isCustomImage: true,
+      }
+
+      setBlocks(newBlocks)
+      setUploadDialogOpen(false)
+
+      // Mark as edited
+      setBlocksReordered(true)
+    } catch (error) {
+      console.error('Error uploading image:', error)
+      setUploadError('Failed to upload image. Please try again.')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  // Add Block Dialog handlers
+  const handleOpenAddBlockDialog = () => {
+    setAddBlockDialogOpen(true)
+    setUploadError(null)
+  }
+
+  const handleAddBlock = async (
+    script: string,
+    prompt: string,
+    file: File | null
+  ) => {
+    let imageUrl = ''
+
+    // If file is selected, upload it
+    if (file) {
+      setIsUploading(true)
+      try {
+        const result = await storage.uploadFile(
+          file,
+          FileType.IMAGE,
+          undefined,
+          'images/user-uploads/'
+        )
+        imageUrl = result.url
+      } catch (error) {
+        console.error('Error uploading image for new block:', error)
+        setUploadError('Failed to upload image for new block.')
+        setIsUploading(false)
+        return
+      }
+      setIsUploading(false)
+    }
+
+    // Create new block
+    const newBlock: Block = {
+      id: `block-${Date.now()}`, // Unique ID
+      imageUrl: imageUrl || '/placeholder-image.jpg', // Use uploaded image or placeholder
+      script: script,
+      prompt: prompt || 'Custom block',
+      isCustomImage: !!file,
+    }
+
+    // Add to blocks
+    const newBlocks = [...blocks, newBlock]
+    setBlocks(newBlocks)
+
+    // Set the current index to the new block
+    setCurrentImageIndex(newBlocks.length - 1)
+
+    // Close dialog
+    setAddBlockDialogOpen(false)
+
+    // Mark as changed
+    setBlocksReordered(true)
+  }
+
   return (
     <Box display="flex" flexDirection="column" gap={3}>
       <Box display="flex" justifyContent="space-between" alignItems="center">
@@ -210,82 +386,62 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
           Generated Images & Scripts
         </Typography>
         <Chip
-          label={`${currentImageIndex + 1}/${imagesData.image_urls.length}`}
+          label={`${currentImageIndex + 1}/${blocks.length}`}
           color="primary"
           variant="outlined"
         />
       </Box>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-        Edit the scripts below to customize each image's narration. Your changes
-        will be used when generating the final video.
+        Edit the scripts below to customize each image's narration. You can
+        reorder blocks, upload your own images, or add new blocks.
       </Typography>
 
       <Divider sx={{ mb: 2 }} />
 
-      {/* Add Prompt Display */}
-      <Paper
-        variant="outlined"
-        sx={{
-          p: 1.5,
-          mb: 2,
-          borderRadius: 2,
-          cursor: 'pointer',
-          '&:hover': { bgcolor: 'action.hover' },
-          borderColor: showPrompt ? 'primary.main' : 'divider',
-          borderStyle: showPrompt ? 'solid' : 'dashed',
-        }}
-        onClick={() => setShowPrompt(!showPrompt)}
-      >
-        <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Box display="flex" alignItems="center" gap={1}>
-            <AutoAwesomeIcon color="primary" fontSize="small" />
-            <Typography variant="subtitle2">Image Generation Prompt</Typography>
-          </Box>
-          {showPrompt ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-        </Box>
+      {/* Main Content Area - Now takes full width */}
+      <Box>
+        {/* Prompt Display */}
+        <PromptDisplay
+          prompt={blocks[currentImageIndex]?.prompt}
+          showPrompt={showPrompt}
+          onTogglePrompt={() => setShowPrompt(!showPrompt)}
+        />
 
-        <Collapse in={showPrompt}>
-          <Box
-            sx={{ p: 1, mt: 1, bgcolor: 'background.default', borderRadius: 1 }}
-          >
-            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-              {promptsList[currentImageIndex] ||
-                'No prompt information available'}
-            </Typography>
-          </Box>
-        </Collapse>
-      </Paper>
-
-      <ImageCarousel
-        currentImageIndex={currentImageIndex}
-        imageUrls={imagesData.image_urls}
-        isFullscreen={isFullscreen}
-        isRegeneratingImages={isRegeneratingImages}
-        loadingImages={loadingImages}
-        onPrevImage={handlePrevImage}
-        onNextImage={handleNextImage}
-        onToggleFullscreen={toggleFullscreen}
-        onImageLoad={handleImageLoad}
-      >
-        <ScriptEditor
+        {/* Image and Script Editor */}
+        <ImageCarousel
           currentImageIndex={currentImageIndex}
-          script={currentScripts[currentImageIndex] || ''}
-          isEdited={editedScripts[currentImageIndex]}
+          imageUrls={blocks.map((block) => block.imageUrl)}
           isFullscreen={isFullscreen}
           isRegeneratingImages={isRegeneratingImages}
-          onScriptChange={handleScriptChange}
+          loadingImages={loadingImages}
+          onPrevImage={handlePrevImage}
+          onNextImage={handleNextImage}
+          onToggleFullscreen={toggleFullscreen}
+          onImageLoad={handleImageLoad}
+          onReplaceImage={handleOpenUploadDialog}
+        >
+          <ScriptEditor
+            currentImageIndex={currentImageIndex}
+            script={blocks[currentImageIndex]?.script || ''}
+            isEdited={editedScripts[currentImageIndex]}
+            isFullscreen={isFullscreen}
+            isRegeneratingImages={isRegeneratingImages}
+            onScriptChange={handleScriptChange}
+          />
+        </ImageCarousel>
+
+        {/* Thumbnails */}
+        <ThumbnailGallery
+          imageUrls={blocks.map((block) => block.imageUrl)}
+          currentImageIndex={currentImageIndex}
+          isRegeneratingImages={isRegeneratingImages}
+          loadingImages={loadingImages}
+          onThumbnailClick={handleThumbnailClick}
         />
-      </ImageCarousel>
+      </Box>
 
-      <ThumbnailGallery
-        imageUrls={imagesData.image_urls}
-        currentImageIndex={currentImageIndex}
-        isRegeneratingImages={isRegeneratingImages}
-        loadingImages={loadingImages}
-        onThumbnailClick={handleThumbnailClick}
-      />
-
+      {/* Action Buttons */}
       <ActionButtons
         hasEditedScripts={hasEditedScripts}
         isRegeneratingImages={isRegeneratingImages}
@@ -296,6 +452,21 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
         onProceedToAudio={handleProceedClick}
       />
 
+      {/* Collapsible Block Manager - Now appears below Action Buttons */}
+      <CollapsibleBlockManager
+        blocks={blocks}
+        currentIndex={currentImageIndex}
+        isRegeneratingImages={isRegeneratingImages}
+        onSelectBlock={setCurrentImageIndex}
+        onReplaceImage={handleOpenUploadDialog}
+        onDeleteBlock={handleDeleteBlock}
+        onOpenAddBlockDialog={handleOpenAddBlockDialog}
+        onReorderBlocks={handleReorderBlocks}
+        onDragStart={(id) => setDragActiveId(id)}
+        onDragEnd={() => setDragActiveId(null)}
+      />
+
+      {/* Notifications */}
       <Notifications
         showSaveNotification={showSaveNotification}
         showIncompleteAlert={showIncompleteAlert}
@@ -303,6 +474,25 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
         onCloseSaveNotification={() => setShowSaveNotification(false)}
         onCloseIncompleteAlert={() => setShowIncompleteAlert(false)}
         onCloseSaveError={() => setSaveError(null)}
+      />
+
+      {/* Image Upload Dialog */}
+      <ImageUploadDialog
+        open={uploadDialogOpen}
+        onClose={() => setUploadDialogOpen(false)}
+        onUpload={handleUploadImage}
+        isUploading={isUploading}
+        error={uploadError}
+        uploadProgress={uploadProgress}
+      />
+
+      {/* Add Block Dialog */}
+      <AddBlockDialog
+        open={addBlockDialogOpen}
+        onClose={() => setAddBlockDialogOpen(false)}
+        onAddBlock={handleAddBlock}
+        isUploading={isUploading}
+        error={uploadError}
       />
     </Box>
   )
