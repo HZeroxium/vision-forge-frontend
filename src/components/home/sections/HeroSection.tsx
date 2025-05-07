@@ -1,13 +1,8 @@
 import React from 'react'
-import {
-  Typography,
-  Button,
-  Container,
-  Grid,
-  Box,
-  useTheme,
-} from '@mui/material'
+import { Typography, Container, Box, useTheme } from '@mui/material'
 import { PlayArrow, KeyboardArrowDown } from '@mui/icons-material'
+import Grid from '@mui/material/Grid2'
+
 import Link from 'next/link'
 import Image from 'next/image'
 import {
@@ -37,7 +32,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFeatures }) => {
     >
       <Container maxWidth="lg">
         <Grid container spacing={4} alignItems="center">
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <MotionBox
               initial="hidden"
               animate="visible"
@@ -45,7 +40,6 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFeatures }) => {
             >
               <MotionTypography
                 variant="h2"
-                component="h1"
                 fontWeight="bold"
                 variants={fadeIn}
                 sx={{ mb: 2 }}
@@ -62,7 +56,6 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFeatures }) => {
               </MotionTypography>
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <MotionButton
-                  component={Link}
                   href="/flow/generate-video"
                   variant="contained"
                   size="large"
@@ -105,15 +98,16 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFeatures }) => {
               </Box>
             </MotionBox>
           </Grid>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <MotionBox
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
               sx={{
                 position: 'relative',
-                height: { xs: '300px', md: '400px' },
-                width: '100%',
+                width: { xs: '250px', sm: '300px', md: '350px' },
+                aspectRatio: '1/1',
+                margin: '0 auto',
                 borderRadius: 4,
                 overflow: 'hidden',
                 boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
@@ -123,7 +117,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onScrollToFeatures }) => {
                 src="/images/logo.webp"
                 alt="AI Video Creation"
                 fill
-                style={{ objectFit: 'cover' }}
+                style={{ objectFit: 'contain' }}
                 priority
               />
             </MotionBox>
