@@ -5,144 +5,183 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import {
   Container,
+  Alert,
+  Button,
+  CircularProgress,
   Typography,
   Box,
   Paper,
-  Grid,
-  Card,
-  CardContent,
-  CardHeader,
-  CircularProgress,
   Tabs,
   Tab,
-  TextField,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Select,
-  Divider,
-  Alert,
-  Chip,
-  IconButton,
-  Tooltip,
-  useTheme,
-  alpha,
-  ButtonGroup,
-  Button,
 } from '@mui/material'
-import { DatePicker } from '@mui/x-date-pickers/DatePicker'
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import {
-  YouTube,
-  Visibility,
-  ThumbUp,
-  Comment,
-  Share,
-  TrendingUp,
-  TrendingDown,
-  PieChart,
-  BarChart,
-  Timeline,
-  Info,
-  CalendarToday,
   Refresh,
-  Download,
-  FilterList,
-  Person,
+  Timeline,
+  BarChart,
+  PieChart,
   Public,
-  PlayCircle,
-  Movie,
 } from '@mui/icons-material'
-import { motion } from 'framer-motion'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
+import { format, subDays } from 'date-fns'
 import { useVideos } from '@hooks/useVideos'
-import { useYouTube } from '@hooks/useYouTube'
-import { Video } from '@services/videoService'
 import * as youtubeService from '@services/youtubeService'
-import type {
-  YouTubeVideoStatistics,
-  BaseAnalyticsResponse,
-  TopVideosAnalyticsResponse,
-  DemographicsAnalyticsResponse,
-} from '@services/types/youtubeTypes'
-import { format, subDays, isAfter, parseISO } from 'date-fns'
-
-// Import chart components
+import { motion } from 'framer-motion'
 import {
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  BarChart as RechartsBarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-  Sector,
-} from 'recharts'
+  BaseAnalyticsResponse,
+  DemographicsAnalyticsResponse,
+  TopVideosAnalyticsResponse,
+  YouTubeVideoStatistics,
+} from '@services/types/youtubeTypes'
 
-import { DataGrid, GridColDef } from '@mui/x-data-grid'
+// Import formatters
+import { formatNumber, formatTime } from '@/utils/formatters'
 
-// Motion components
-const MotionBox = motion(Box)
-const MotionPaper = motion(Paper)
-const MotionCard = motion(Card)
+// Import components
+import Header from '@/components/youtube/analytics/Header'
+import ControlsPanel from '@/components/youtube/analytics/ControlsPanel'
+import SummaryCards from '@/components/youtube/analytics/SummaryCards'
+import TabPanel from '@/components/youtube/analytics/TabPanel'
+import OverviewTab from '@/components/youtube/analytics/tabs/OverviewTab'
+import PerformanceTab from '@/components/youtube/analytics/tabs/PerformanceTab'
+import DemographicsTab from '@/components/youtube/analytics/tabs/DemographicsTab'
+import PublishedVideosTab from '@/components/youtube/analytics/tabs/PublishedVideosTab'
 
-// Animation variants
-const fadeIn = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
+// Define types
+type DateRangeOption = '7d' | '30d' | '90d' | 'custom'
+
+interface VideoOption {
+  id: string
+  title: string
+  youtubeVideoId?: string
 }
 
-// Tab panel component
-interface TabPanelProps {
-  children?: React.ReactNode
-  index: number
+interface SummaryMetrics {
+  totalViews: number
+  totalLikes: number
+  totalComments: number
+  totalShares: number
+  totalWatchTime: number
+  avgViewDuration: number
+}
+
+interface AnalyticsRow {
+  [key: string]: any
+}
+
+interface AnalyticsColumn {
+  name: string
+  type: string
+  dataType: string
+}
+
+// Modified to better align with API responses
+interface AnalyticsData {
+  rows: AnalyticsRow[]
+  columnHeaders: AnalyticsColumn[]
+  labels?: string[]
+  datasets?: any[]
+  timeUnit?: string
+}
+
+interface ChartDataPoint {
+  date: string
+  views: number
+}
+
+interface EngagementDataPoint {
+  date: string
+  likes: number
+  comments: number
+  shares: number
+}
+
+interface DemographicsDataPoint {
+  name: string
   value: number
 }
 
-function TabPanel({ children, value, index, ...other }: TabPanelProps) {
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`analytics-tabpanel-${index}`}
-      aria-labelledby={`analytics-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
-    </div>
-  )
+interface TopVideoData {
+  id: number
+  videoId: string
+  title: string
+  views: number
+  likes: number
+  comments: number
+  shares: number
+  watchTime: string
 }
 
-// Helper function for a11y
-function a11yProps(index: number) {
+// Fixed to match YouTubeVideoStatistics
+interface PublishedVideo {
+  id: string
+  title?: string
+  thumbnailUrl?: string
+  publishingHistoryId?: string
+  youtubeData?: {
+    youtubeUrl?: string
+    youtubeVideoId?: string
+    statistics?: {
+      viewCount?: number
+      likeCount?: number
+      commentCount?: number
+      favoriteCount?: number
+      lastUpdated?: string
+    }
+  }
+}
+
+const MotionBox = motion(Box)
+
+// Helper functions to adapt API responses to component interfaces
+const adaptBaseAnalytics = (data: BaseAnalyticsResponse): AnalyticsData => {
   return {
-    id: `analytics-tab-${index}`,
-    'aria-controls': `analytics-tabpanel-${index}`,
+    rows: data.rows || [],
+    columnHeaders: data.columnHeaders || [],
+    labels: data.labels,
+    datasets: data.datasets,
+    timeUnit: data.timeUnit,
   }
 }
 
-// Number formatting helpers
-const formatNumber = (num: number): string => {
-  if (num >= 1000000) {
-    return `${(num / 1000000).toFixed(1)}M`
-  } else if (num >= 1000) {
-    return `${(num / 1000).toFixed(1)}K`
-  }
-  return num.toString()
-}
+const adaptDemographicsAnalytics = (
+  data: DemographicsAnalyticsResponse
+): AnalyticsData => {
+  // Create a compatible structure for our components
+  const rows = []
+  const columnHeaders = [
+    { name: 'ageGroup', type: 'string', dataType: 'string' },
+    { name: 'gender', type: 'string', dataType: 'string' },
+    { name: 'viewerPercentage', type: 'number', dataType: 'number' },
+  ]
 
-type DateRangeOption = '7d' | '30d' | '90d' | 'custom'
+  // Process age groups
+  if (data.ageGroups) {
+    Object.entries(data.ageGroups).forEach(([ageGroup, genderData]) => {
+      if (genderData.male) {
+        rows.push([ageGroup, 'male', genderData.male])
+      }
+      if (genderData.female) {
+        rows.push([ageGroup, 'female', genderData.female])
+      }
+      if (genderData.other) {
+        rows.push([ageGroup, 'other', genderData.other])
+      }
+    })
+  }
+
+  // Process gender distribution
+  if (data.genderDistribution) {
+    const { male, female, other } = data.genderDistribution
+    if (male) rows.push(['all', 'male', male])
+    if (female) rows.push(['all', 'female', female])
+    if (other) rows.push(['all', 'other', other])
+  }
+
+  return { rows, columnHeaders }
+}
 
 export default function YouTubeAnalyticsPage() {
-  const theme = useTheme()
   const { userVideos, userLoading, loadUserVideos } = useVideos()
   const [tabValue, setTabValue] = useState(0)
 
@@ -163,20 +202,19 @@ export default function YouTubeAnalyticsPage() {
   const [topVideosLoading, setTopVideosLoading] = useState(false)
 
   const [channelAnalytics, setChannelAnalytics] =
-    useState<BaseAnalyticsResponse | null>(null)
-  const [videoAnalytics, setVideoAnalytics] =
-    useState<BaseAnalyticsResponse | null>(null)
+    useState<AnalyticsData | null>(null)
+  const [videoAnalytics, setVideoAnalytics] = useState<AnalyticsData | null>(
+    null
+  )
   const [demographicsAnalytics, setDemographicsAnalytics] =
-    useState<DemographicsAnalyticsResponse | null>(null)
+    useState<AnalyticsData | null>(null)
   const [topVideosAnalytics, setTopVideosAnalytics] =
-    useState<TopVideosAnalyticsResponse | null>(null)
+    useState<AnalyticsData | null>(null)
 
   const [loadingError, setLoadingError] = useState<string | null>(null)
 
   // Published videos with YouTube data
-  const [publishedVideos, setPublishedVideos] = useState<
-    Array<Video & { youtubeData?: YouTubeVideoStatistics }>
-  >([])
+  const [publishedVideos, setPublishedVideos] = useState<PublishedVideo[]>([])
   const [loadingPublishedVideos, setLoadingPublishedVideos] = useState(false)
 
   // Handle tab change
@@ -185,10 +223,7 @@ export default function YouTubeAnalyticsPage() {
   }
 
   // Handle date range change
-  const handleDateRangeChange = (
-    event: React.ChangeEvent<{ value: unknown }>
-  ) => {
-    const value = event.target.value as DateRangeOption
+  const handleDateRangeChange = (value: DateRangeOption) => {
     setDateRange(value)
 
     if (value === '7d') {
@@ -226,11 +261,12 @@ export default function YouTubeAnalyticsPage() {
     const fetchYouTubeData = async () => {
       if (!userVideos.length) return
 
-      const publishedWithYouTubeData = []
+      const publishedWithYouTubeData: PublishedVideo[] = []
 
       for (const video of userVideos) {
         if (video.publishingHistoryId) {
           try {
+            // Type fixed by modifying PublishedVideo interface to match YouTubeVideoStatistics
             const youtubeData = await youtubeService.getVideoStatistics(
               video.publishingHistoryId
             )
@@ -253,7 +289,7 @@ export default function YouTubeAnalyticsPage() {
     }
   }, [userVideos, loadingPublishedVideos])
 
-  // Fetch channel analytics when date range changes
+  // Fetch channel analytics
   useEffect(() => {
     const fetchChannelAnalytics = async () => {
       if (!startDate || !endDate) return
@@ -276,7 +312,8 @@ export default function YouTubeAnalyticsPage() {
           dimensions
         )
 
-        setChannelAnalytics(data)
+        // Fix: Adapt API response to match expected structure
+        setChannelAnalytics(adaptBaseAnalytics(data))
       } catch (error: any) {
         console.error('Error fetching channel analytics:', error)
         setLoadingError(error.message || 'Failed to load channel analytics')
@@ -288,7 +325,7 @@ export default function YouTubeAnalyticsPage() {
     fetchChannelAnalytics()
   }, [startDate, endDate])
 
-  // Fetch video analytics when video selection or date range changes
+  // Fetch video analytics
   useEffect(() => {
     const fetchVideoAnalytics = async () => {
       if (!startDate || !endDate) return
@@ -327,7 +364,8 @@ export default function YouTubeAnalyticsPage() {
           dimensions
         )
 
-        setVideoAnalytics(data)
+        // Fix: Adapt API response to match expected structure
+        setVideoAnalytics(adaptBaseAnalytics(data))
       } catch (error: any) {
         console.error('Error fetching video analytics:', error)
         setLoadingError(error.message || 'Failed to load video analytics')
@@ -342,7 +380,7 @@ export default function YouTubeAnalyticsPage() {
   // Fetch demographics analytics
   useEffect(() => {
     const fetchDemographics = async () => {
-      if (!startDate || !endDate) return
+      if (!startDate || !endDate || tabValue !== 2) return
 
       try {
         setDemographicsLoading(true)
@@ -356,7 +394,8 @@ export default function YouTubeAnalyticsPage() {
           formattedEndDate
         )
 
-        setDemographicsAnalytics(data)
+        // Fix: Transform demographics data to match expected structure
+        setDemographicsAnalytics(adaptDemographicsAnalytics(data))
       } catch (error: any) {
         console.error('Error fetching demographics analytics:', error)
         // Don't set error - demographics might be unavailable for small channels
@@ -366,16 +405,13 @@ export default function YouTubeAnalyticsPage() {
       }
     }
 
-    // Only load demographics on demographics tab to reduce API calls
-    if (tabValue === 2) {
-      fetchDemographics()
-    }
+    fetchDemographics()
   }, [tabValue, startDate, endDate])
 
   // Fetch top videos analytics
   useEffect(() => {
     const fetchTopVideos = async () => {
-      if (!startDate || !endDate) return
+      if (!startDate || !endDate || tabValue !== 1) return
 
       try {
         setTopVideosLoading(true)
@@ -393,7 +429,13 @@ export default function YouTubeAnalyticsPage() {
           formattedEndDate
         )
 
-        setTopVideosAnalytics(data)
+        // Create compatible structure for top videos
+        const adaptedTopVideos: AnalyticsData = {
+          rows: data.rows || [],
+          columnHeaders: data.columnHeaders || [],
+        }
+
+        setTopVideosAnalytics(adaptedTopVideos)
       } catch (error: any) {
         console.error('Error fetching top videos analytics:', error)
         setLoadingError(error.message || 'Failed to load top videos analytics')
@@ -402,10 +444,7 @@ export default function YouTubeAnalyticsPage() {
       }
     }
 
-    // Only load top videos on performance tab
-    if (tabValue === 1) {
-      fetchTopVideos()
-    }
+    fetchTopVideos()
   }, [tabValue, startDate, endDate])
 
   // Refresh all data
@@ -419,17 +458,13 @@ export default function YouTubeAnalyticsPage() {
     // Refetch user videos
     loadUserVideos(1, 50)
 
-    // Force re-run of all effects by changing date slightly
+    // Force re-run of effects by changing date slightly
     setEndDate(new Date())
   }
 
   // Calculate summary metrics
-  const summaryMetrics = useMemo(() => {
-    if (
-      !channelAnalytics ||
-      !channelAnalytics.rows ||
-      channelAnalytics.rows.length === 0
-    ) {
+  const summaryMetrics = useMemo((): SummaryMetrics => {
+    if (!channelAnalytics?.rows || channelAnalytics.rows.length === 0) {
       return {
         totalViews: 0,
         totalLikes: 0,
@@ -440,40 +475,30 @@ export default function YouTubeAnalyticsPage() {
       }
     }
 
-    return channelAnalytics.rows.reduce(
-      (acc, row) => {
-        // Find indices for each metric in the columnHeaders
-        const viewsIndex = channelAnalytics.columnHeaders.findIndex(
-          (h) => h.name === 'views'
-        )
-        const likesIndex = channelAnalytics.columnHeaders.findIndex(
-          (h) => h.name === 'likes'
-        )
-        const commentsIndex = channelAnalytics.columnHeaders.findIndex(
-          (h) => h.name === 'comments'
-        )
-        const sharesIndex = channelAnalytics.columnHeaders.findIndex(
-          (h) => h.name === 'shares'
-        )
-        const watchTimeIndex = channelAnalytics.columnHeaders.findIndex(
-          (h) => h.name === 'estimatedMinutesWatched'
-        )
-        const avgDurationIndex = channelAnalytics.columnHeaders.findIndex(
-          (h) => h.name === 'averageViewDuration'
-        )
+    // Find indices for each metric in the columnHeaders
+    const getColumnIndex = (name: string): number => {
+      return channelAnalytics.columnHeaders.findIndex((h) => h.name === name)
+    }
 
-        return {
-          totalViews: acc.totalViews + Number(row[viewsIndex] || 0),
-          totalLikes: acc.totalLikes + Number(row[likesIndex] || 0),
-          totalComments: acc.totalComments + Number(row[commentsIndex] || 0),
-          totalShares: acc.totalShares + Number(row[sharesIndex] || 0),
-          totalWatchTime: acc.totalWatchTime + Number(row[watchTimeIndex] || 0),
-          // Average view duration is in seconds
-          avgViewDuration:
-            acc.avgViewDuration +
-            Number(row[avgDurationIndex] || 0) / channelAnalytics.rows.length,
-        }
-      },
+    const viewsIndex = getColumnIndex('views')
+    const likesIndex = getColumnIndex('likes')
+    const commentsIndex = getColumnIndex('comments')
+    const sharesIndex = getColumnIndex('shares')
+    const watchTimeIndex = getColumnIndex('estimatedMinutesWatched')
+    const avgDurationIndex = getColumnIndex('averageViewDuration')
+
+    return channelAnalytics.rows.reduce(
+      (acc: SummaryMetrics, row: AnalyticsRow) => ({
+        totalViews: acc.totalViews + Number(row[viewsIndex] || 0),
+        totalLikes: acc.totalLikes + Number(row[likesIndex] || 0),
+        totalComments: acc.totalComments + Number(row[commentsIndex] || 0),
+        totalShares: acc.totalShares + Number(row[sharesIndex] || 0),
+        totalWatchTime: acc.totalWatchTime + Number(row[watchTimeIndex] || 0),
+        // Average view duration is in seconds
+        avgViewDuration:
+          acc.avgViewDuration +
+          Number(row[avgDurationIndex] || 0) / channelAnalytics.rows.length,
+      }),
       {
         totalViews: 0,
         totalLikes: 0,
@@ -485,16 +510,9 @@ export default function YouTubeAnalyticsPage() {
     )
   }, [channelAnalytics])
 
-  // Format time (seconds) to minutes and seconds
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`
-  }
-
-  // Create chart data for view trends
-  const viewTrendsData = useMemo(() => {
-    if (!channelAnalytics || !channelAnalytics.rows) return []
+  // Process data for charts
+  const viewTrendsData = useMemo((): ChartDataPoint[] => {
+    if (!channelAnalytics?.rows || channelAnalytics.rows.length === 0) return []
 
     const viewsIndex = channelAnalytics.columnHeaders.findIndex(
       (h) => h.name === 'views'
@@ -509,22 +527,17 @@ export default function YouTubeAnalyticsPage() {
     }))
   }, [channelAnalytics])
 
-  // Create chart data for engagement trends
-  const engagementTrendsData = useMemo(() => {
-    if (!channelAnalytics || !channelAnalytics.rows) return []
+  const engagementTrendsData = useMemo((): EngagementDataPoint[] => {
+    if (!channelAnalytics?.rows || channelAnalytics.rows.length === 0) return []
 
-    const likesIndex = channelAnalytics.columnHeaders.findIndex(
-      (h) => h.name === 'likes'
-    )
-    const commentsIndex = channelAnalytics.columnHeaders.findIndex(
-      (h) => h.name === 'comments'
-    )
-    const sharesIndex = channelAnalytics.columnHeaders.findIndex(
-      (h) => h.name === 'shares'
-    )
-    const dayIndex = channelAnalytics.columnHeaders.findIndex(
-      (h) => h.name === 'day'
-    )
+    const getColumnIndex = (name: string): number => {
+      return channelAnalytics.columnHeaders.findIndex((h) => h.name === name)
+    }
+
+    const likesIndex = getColumnIndex('likes')
+    const commentsIndex = getColumnIndex('comments')
+    const sharesIndex = getColumnIndex('shares')
+    const dayIndex = getColumnIndex('day')
 
     return channelAnalytics.rows.map((row) => ({
       date: row[dayIndex],
@@ -534,27 +547,26 @@ export default function YouTubeAnalyticsPage() {
     }))
   }, [channelAnalytics])
 
-  // Create chart data for demographics
+  // Process demographics data
   const demographicsData = useMemo(() => {
-    if (!demographicsAnalytics || !demographicsAnalytics.rows) {
+    if (!demographicsAnalytics?.rows) {
       return { ageData: [], genderData: [] }
     }
 
     const ageGroups: Record<string, number> = {}
     const genders: Record<string, number> = {}
 
-    demographicsAnalytics.rows.forEach((row) => {
-      const ageGroupIndex = demographicsAnalytics.columnHeaders.findIndex(
-        (h) => h.name === 'ageGroup'
+    const getColumnIndex = (name: string): number => {
+      return demographicsAnalytics.columnHeaders.findIndex(
+        (h) => h.name === name
       )
-      const genderIndex = demographicsAnalytics.columnHeaders.findIndex(
-        (h) => h.name === 'gender'
-      )
-      const viewsPercentageIndex =
-        demographicsAnalytics.columnHeaders.findIndex(
-          (h) => h.name === 'viewerPercentage'
-        )
+    }
 
+    const ageGroupIndex = getColumnIndex('ageGroup')
+    const genderIndex = getColumnIndex('gender')
+    const viewsPercentageIndex = getColumnIndex('viewerPercentage')
+
+    demographicsAnalytics.rows.forEach((row) => {
       const ageGroup = row[ageGroupIndex] as string
       const gender = row[genderIndex] as string
       const viewsPercentage = Number(row[viewsPercentageIndex] || 0)
@@ -568,44 +580,38 @@ export default function YouTubeAnalyticsPage() {
       }
     })
 
-    const ageData = Object.entries(ageGroups).map(([name, value]) => ({
-      name,
-      value: Number(value.toFixed(1)),
-    }))
+    const ageData: DemographicsDataPoint[] = Object.entries(ageGroups).map(
+      ([name, value]) => ({
+        name,
+        value: Number(value.toFixed(1)),
+      })
+    )
 
-    const genderData = Object.entries(genders).map(([name, value]) => ({
-      name,
-      value: Number(value.toFixed(1)),
-    }))
+    const genderData: DemographicsDataPoint[] = Object.entries(genders).map(
+      ([name, value]) => ({
+        name,
+        value: Number(value.toFixed(1)),
+      })
+    )
 
     return { ageData, genderData }
   }, [demographicsAnalytics])
 
-  // Top videos data for table
-  const topVideosTableData = useMemo(() => {
-    if (!topVideosAnalytics || !topVideosAnalytics.rows) return []
+  // Process top videos data
+  const topVideosTableData = useMemo((): TopVideoData[] => {
+    if (!topVideosAnalytics?.rows) return []
 
-    const titleIndex = topVideosAnalytics.columnHeaders.findIndex(
-      (h) => h.name === 'video'
-    )
-    const videoIdIndex = topVideosAnalytics.columnHeaders.findIndex(
-      (h) => h.name === 'videoId'
-    )
-    const viewsIndex = topVideosAnalytics.columnHeaders.findIndex(
-      (h) => h.name === 'views'
-    )
-    const likesIndex = topVideosAnalytics.columnHeaders.findIndex(
-      (h) => h.name === 'likes'
-    )
-    const commentsIndex = topVideosAnalytics.columnHeaders.findIndex(
-      (h) => h.name === 'comments'
-    )
-    const sharesIndex = topVideosAnalytics.columnHeaders.findIndex(
-      (h) => h.name === 'shares'
-    )
-    const watchTimeIndex = topVideosAnalytics.columnHeaders.findIndex(
-      (h) => h.name === 'estimatedMinutesWatched'
-    )
+    const getColumnIndex = (name: string): number => {
+      return topVideosAnalytics.columnHeaders.findIndex((h) => h.name === name)
+    }
+
+    const titleIndex = getColumnIndex('video')
+    const videoIdIndex = getColumnIndex('videoId')
+    const viewsIndex = getColumnIndex('views')
+    const likesIndex = getColumnIndex('likes')
+    const commentsIndex = getColumnIndex('comments')
+    const sharesIndex = getColumnIndex('shares')
+    const watchTimeIndex = getColumnIndex('estimatedMinutesWatched')
 
     return topVideosAnalytics.rows.map((row, index) => ({
       id: index,
@@ -619,100 +625,22 @@ export default function YouTubeAnalyticsPage() {
     }))
   }, [topVideosAnalytics])
 
-  // Column definitions for top videos table
-  const topVideosColumns: GridColDef[] = [
-    { field: 'title', headerName: 'Video Title', flex: 2, minWidth: 200 },
-    {
-      field: 'views',
-      headerName: 'Views',
-      width: 100,
-      type: 'number',
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Visibility fontSize="small" color="action" />
-          {formatNumber(params.value as number)}
-        </Box>
-      ),
-    },
-    {
-      field: 'likes',
-      headerName: 'Likes',
-      width: 100,
-      type: 'number',
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <ThumbUp fontSize="small" color="action" />
-          {formatNumber(params.value as number)}
-        </Box>
-      ),
-    },
-    {
-      field: 'comments',
-      headerName: 'Comments',
-      width: 120,
-      type: 'number',
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Comment fontSize="small" color="action" />
-          {formatNumber(params.value as number)}
-        </Box>
-      ),
-    },
-    {
-      field: 'watchTime',
-      headerName: 'Watch Time (min)',
-      width: 150,
-      type: 'number',
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Timeline fontSize="small" color="action" />
-          {params.value}
-        </Box>
-      ),
-    },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 120,
-      sortable: false,
-      renderCell: (params) => (
-        <Button
-          size="small"
-          variant="outlined"
-          href={`https://www.youtube.com/watch?v=${params.row.videoId}`}
-          target="_blank"
-          startIcon={<YouTube />}
-        >
-          View
-        </Button>
-      ),
-    },
-  ]
-
-  // Get video select options
-  const videoOptions = useMemo(() => {
-    const options = publishedVideos
+  // Get video options for selector
+  const videoOptions = useMemo((): VideoOption[] => {
+    return publishedVideos
       .filter((video) => video.youtubeData?.youtubeUrl)
       .map((video) => ({
         id: video.id,
         title: video.title || video.id,
         youtubeVideoId: video.youtubeData?.youtubeVideoId,
       }))
-
-    return options
   }, [publishedVideos])
 
-  // COLORS for charts
-  const COLORS = [
-    theme.palette.primary.main,
-    theme.palette.secondary.main,
-    theme.palette.error.main,
-    theme.palette.success.main,
-    theme.palette.warning.main,
-    '#8884d8',
-    '#82ca9d',
-    '#ffc658',
-  ]
+  // Handle data export
+  const handleExport = () => {
+    // Placeholder for future CSV export functionality
+    console.log('Export functionality will be implemented in the future')
+  }
 
   // Render loading state
   if (userLoading && loadingPublishedVideos) {
@@ -752,135 +680,37 @@ export default function YouTubeAnalyticsPage() {
     )
   }
 
+  // Check if any videos are published to YouTube
+  const hasPublishedVideos = publishedVideos.some(
+    (video) => video.youtubeData?.youtubeUrl
+  )
+
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Container maxWidth="xl" sx={{ py: 4 }}>
-        {/* Header */}
-        <MotionBox
-          initial="hidden"
-          animate="visible"
-          variants={fadeIn}
-          transition={{ duration: 0.5 }}
-          sx={{ mb: 4 }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <YouTube color="error" sx={{ mr: 1, fontSize: 32 }} />
-            <Typography variant="h4" fontWeight="bold">
-              YouTube Analytics
-            </Typography>
-          </Box>
+        {/* Header Component */}
+        <Header
+          title="YouTube Analytics"
+          subtitle="Track performance and engagement for your YouTube videos"
+        />
 
-          <Typography variant="subtitle1" color="text.secondary">
-            Track performance and engagement for your YouTube videos
-          </Typography>
-        </MotionBox>
+        {/* Controls Panel Component */}
+        <ControlsPanel
+          dateRange={dateRange}
+          onDateRangeChange={handleDateRangeChange}
+          startDate={startDate}
+          setStartDate={setStartDate}
+          endDate={endDate}
+          setEndDate={setEndDate}
+          selectedVideo={selectedVideo}
+          onVideoChange={setSelectedVideo}
+          videoOptions={videoOptions}
+          onRefresh={handleRefresh}
+          onExport={handleExport}
+        />
 
-        {/* Controls */}
-        <MotionPaper
-          variants={fadeIn}
-          initial="hidden"
-          animate="visible"
-          transition={{ duration: 0.5, delay: 0.1 }}
-          elevation={1}
-          sx={{
-            p: 2,
-            mb: 4,
-            borderRadius: 2,
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 2,
-          }}
-        >
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              flexWrap: 'wrap',
-              flexGrow: 1,
-            }}
-          >
-            {/* Date range selector */}
-            <FormControl sx={{ minWidth: 120 }}>
-              <InputLabel>Date Range</InputLabel>
-              <Select
-                value={dateRange}
-                label="Date Range"
-                onChange={(e) => handleDateRangeChange(e as any)}
-                startAdornment={
-                  <CalendarToday sx={{ mr: 1, opacity: 0.6, fontSize: 18 }} />
-                }
-              >
-                <MenuItem value="7d">Last 7 days</MenuItem>
-                <MenuItem value="30d">Last 30 days</MenuItem>
-                <MenuItem value="90d">Last 90 days</MenuItem>
-                <MenuItem value="custom">Custom range</MenuItem>
-              </Select>
-            </FormControl>
-
-            {dateRange === 'custom' && (
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <DatePicker
-                  label="Start Date"
-                  value={startDate}
-                  onChange={(newValue) => setStartDate(newValue)}
-                  slotProps={{
-                    textField: {
-                      size: 'small',
-                      sx: { width: 150 },
-                    },
-                  }}
-                />
-                <DatePicker
-                  label="End Date"
-                  value={endDate}
-                  minDate={startDate || undefined}
-                  onChange={(newValue) => setEndDate(newValue)}
-                  slotProps={{
-                    textField: {
-                      size: 'small',
-                      sx: { width: 150 },
-                    },
-                  }}
-                />
-              </Box>
-            )}
-
-            {/* Video selector */}
-            <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>Filter by video</InputLabel>
-              <Select
-                value={selectedVideo}
-                label="Filter by video"
-                onChange={(e) => setSelectedVideo(e.target.value as string)}
-                startAdornment={
-                  <FilterList sx={{ mr: 1, opacity: 0.6, fontSize: 18 }} />
-                }
-              >
-                <MenuItem value="all">All videos</MenuItem>
-                {videoOptions.map((video) => (
-                  <MenuItem key={video.id} value={video.id}>
-                    {video.title}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-
-          {/* Actions */}
-          <Box>
-            <ButtonGroup variant="outlined" size="medium">
-              <Button startIcon={<Refresh />} onClick={handleRefresh}>
-                Refresh
-              </Button>
-              <Tooltip title="Export data as CSV">
-                <Button startIcon={<Download />}>Export</Button>
-              </Tooltip>
-            </ButtonGroup>
-          </Box>
-        </MotionPaper>
-
-        {publishedVideos.length === 0 && (
+        {/* No published videos message */}
+        {!hasPublishedVideos && (
           <Alert
             severity="info"
             sx={{ mb: 4 }}
@@ -895,988 +725,99 @@ export default function YouTubeAnalyticsPage() {
           </Alert>
         )}
 
-        {/* Summary Cards */}
-        {publishedVideos.length > 0 && (
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={4} lg={2}>
-              <MotionCard
-                variants={fadeIn}
-                initial="hidden"
-                animate="visible"
-                transition={{ duration: 0.5, delay: 0.2 }}
-                sx={{ borderRadius: 2 }}
-              >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Chip
-                      icon={<Visibility />}
-                      label="Views"
-                      size="small"
-                      sx={{
-                        bgcolor: alpha(theme.palette.primary.main, 0.1),
-                        color: theme.palette.primary.main,
-                      }}
-                    />
-                  </Box>
-                  <Typography variant="h4" fontWeight="medium">
-                    {channelLoading ? (
-                      <CircularProgress size={20} />
-                    ) : (
-                      formatNumber(summaryMetrics.totalViews)
-                    )}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Views
-                  </Typography>
-                </CardContent>
-              </MotionCard>
-            </Grid>
+        {/* Analytics Content (only shown if there are published videos) */}
+        {hasPublishedVideos && (
+          <>
+            {/* Summary Cards Component */}
+            <SummaryCards
+              metrics={summaryMetrics}
+              isLoading={channelLoading}
+              formatNumber={formatNumber}
+              formatTime={formatTime}
+            />
 
-            <Grid item xs={12} sm={6} md={4} lg={2}>
-              <MotionCard
-                variants={fadeIn}
-                initial="hidden"
-                animate="visible"
-                transition={{ duration: 0.5, delay: 0.25 }}
-                sx={{ borderRadius: 2 }}
-              >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Chip
-                      icon={<ThumbUp />}
-                      label="Likes"
-                      size="small"
-                      sx={{
-                        bgcolor: alpha(theme.palette.secondary.main, 0.1),
-                        color: theme.palette.secondary.main,
-                      }}
-                    />
-                  </Box>
-                  <Typography variant="h4" fontWeight="medium">
-                    {channelLoading ? (
-                      <CircularProgress size={20} />
-                    ) : (
-                      formatNumber(summaryMetrics.totalLikes)
-                    )}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Likes
-                  </Typography>
-                </CardContent>
-              </MotionCard>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={4} lg={2}>
-              <MotionCard
-                variants={fadeIn}
-                initial="hidden"
-                animate="visible"
-                transition={{ duration: 0.5, delay: 0.3 }}
-                sx={{ borderRadius: 2 }}
-              >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Chip
-                      icon={<Comment />}
-                      label="Comments"
-                      size="small"
-                      sx={{
-                        bgcolor: alpha(theme.palette.success.main, 0.1),
-                        color: theme.palette.success.main,
-                      }}
-                    />
-                  </Box>
-                  <Typography variant="h4" fontWeight="medium">
-                    {channelLoading ? (
-                      <CircularProgress size={20} />
-                    ) : (
-                      formatNumber(summaryMetrics.totalComments)
-                    )}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Comments
-                  </Typography>
-                </CardContent>
-              </MotionCard>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={4} lg={2}>
-              <MotionCard
-                variants={fadeIn}
-                initial="hidden"
-                animate="visible"
-                transition={{ duration: 0.5, delay: 0.35 }}
-                sx={{ borderRadius: 2 }}
-              >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Chip
-                      icon={<Share />}
-                      label="Shares"
-                      size="small"
-                      sx={{
-                        bgcolor: alpha(theme.palette.info.main, 0.1),
-                        color: theme.palette.info.main,
-                      }}
-                    />
-                  </Box>
-                  <Typography variant="h4" fontWeight="medium">
-                    {channelLoading ? (
-                      <CircularProgress size={20} />
-                    ) : (
-                      formatNumber(summaryMetrics.totalShares)
-                    )}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Shares
-                  </Typography>
-                </CardContent>
-              </MotionCard>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={4} lg={2}>
-              <MotionCard
-                variants={fadeIn}
-                initial="hidden"
-                animate="visible"
-                transition={{ duration: 0.5, delay: 0.4 }}
-                sx={{ borderRadius: 2 }}
-              >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Chip
-                      icon={<Timeline />}
-                      label="Watch Time"
-                      size="small"
-                      sx={{
-                        bgcolor: alpha(theme.palette.warning.main, 0.1),
-                        color: theme.palette.warning.main,
-                      }}
-                    />
-                  </Box>
-                  <Typography variant="h4" fontWeight="medium">
-                    {channelLoading ? (
-                      <CircularProgress size={20} />
-                    ) : (
-                      `${Math.floor(summaryMetrics.totalWatchTime)}m`
-                    )}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Minutes Watched
-                  </Typography>
-                </CardContent>
-              </MotionCard>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={4} lg={2}>
-              <MotionCard
-                variants={fadeIn}
-                initial="hidden"
-                animate="visible"
-                transition={{ duration: 0.5, delay: 0.45 }}
-                sx={{ borderRadius: 2 }}
-              >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Chip
-                      icon={<PlayCircle />}
-                      label="Avg Duration"
-                      size="small"
-                      sx={{
-                        bgcolor: alpha(theme.palette.error.main, 0.1),
-                        color: theme.palette.error.main,
-                      }}
-                    />
-                  </Box>
-                  <Typography variant="h4" fontWeight="medium">
-                    {channelLoading ? (
-                      <CircularProgress size={20} />
-                    ) : (
-                      formatTime(summaryMetrics.avgViewDuration)
-                    )}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Average View Duration
-                  </Typography>
-                </CardContent>
-              </MotionCard>
-            </Grid>
-          </Grid>
-        )}
-
-        {/* Tabs */}
-        {publishedVideos.length > 0 && (
-          <MotionBox
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-          >
-            <Paper sx={{ borderRadius: 2, overflow: 'hidden' }}>
-              <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            {/* Tabs Navigation */}
+            <MotionBox
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+            >
+              <Paper sx={{ borderRadius: 2, overflow: 'hidden' }}>
                 <Tabs
                   value={tabValue}
                   onChange={handleTabChange}
                   variant="scrollable"
                   scrollButtons="auto"
                   aria-label="analytics tabs"
+                  sx={{ borderBottom: 1, borderColor: 'divider' }}
                 >
                   <Tab
                     icon={<Timeline />}
                     iconPosition="start"
                     label="Overview"
-                    {...a11yProps(0)}
+                    id="analytics-tab-0"
+                    aria-controls="analytics-tabpanel-0"
                   />
                   <Tab
                     icon={<BarChart />}
                     iconPosition="start"
                     label="Performance"
-                    {...a11yProps(1)}
+                    id="analytics-tab-1"
+                    aria-controls="analytics-tabpanel-1"
                   />
                   <Tab
                     icon={<PieChart />}
                     iconPosition="start"
                     label="Demographics"
-                    {...a11yProps(2)}
+                    id="analytics-tab-2"
+                    aria-controls="analytics-tabpanel-2"
                   />
                   <Tab
                     icon={<Public />}
                     iconPosition="start"
                     label="Published Videos"
-                    {...a11yProps(3)}
+                    id="analytics-tab-3"
+                    aria-controls="analytics-tabpanel-3"
                   />
                 </Tabs>
-              </Box>
 
-              {/* Overview Tab */}
-              <TabPanel value={tabValue} index={0}>
-                <Grid container spacing={3}>
-                  {/* View trends chart */}
-                  <Grid item xs={12}>
-                    <Card sx={{ borderRadius: 2, overflow: 'hidden' }}>
-                      <CardHeader
-                        title="View Trends"
-                        subheader={`Daily views from ${startDate ? format(startDate, 'MMM d, yyyy') : ''} to ${endDate ? format(endDate, 'MMM d, yyyy') : ''}`}
-                        sx={{ pb: 0 }}
-                      />
-                      <CardContent>
-                        {channelLoading ? (
-                          <Box
-                            display="flex"
-                            justifyContent="center"
-                            alignItems="center"
-                            height="300px"
-                          >
-                            <CircularProgress />
-                          </Box>
-                        ) : viewTrendsData.length > 0 ? (
-                          <Box sx={{ width: '100%', height: 300 }}>
-                            <ResponsiveContainer>
-                              <AreaChart
-                                data={viewTrendsData}
-                                margin={{
-                                  top: 10,
-                                  right: 30,
-                                  left: 0,
-                                  bottom: 0,
-                                }}
-                              >
-                                <defs>
-                                  <linearGradient
-                                    id="colorViews"
-                                    x1="0"
-                                    y1="0"
-                                    x2="0"
-                                    y2="1"
-                                  >
-                                    <stop
-                                      offset="5%"
-                                      stopColor={theme.palette.primary.main}
-                                      stopOpacity={0.8}
-                                    />
-                                    <stop
-                                      offset="95%"
-                                      stopColor={theme.palette.primary.main}
-                                      stopOpacity={0.1}
-                                    />
-                                  </linearGradient>
-                                </defs>
-                                <CartesianGrid
-                                  strokeDasharray="3 3"
-                                  vertical={false}
-                                  opacity={0.2}
-                                />
-                                <XAxis
-                                  dataKey="date"
-                                  tick={{ fontSize: 12 }}
-                                  tickFormatter={(value) => {
-                                    try {
-                                      return format(new Date(value), 'MMM d')
-                                    } catch (e) {
-                                      return value
-                                    }
-                                  }}
-                                />
-                                <YAxis tick={{ fontSize: 12 }} />
-                                <RechartsTooltip
-                                  formatter={(value: number) => [
-                                    `${value} views`,
-                                    'Views',
-                                  ]}
-                                  labelFormatter={(label) => {
-                                    try {
-                                      return format(
-                                        new Date(label),
-                                        'MMM d, yyyy'
-                                      )
-                                    } catch (e) {
-                                      return label
-                                    }
-                                  }}
-                                />
-                                <Area
-                                  type="monotone"
-                                  dataKey="views"
-                                  stroke={theme.palette.primary.main}
-                                  fillOpacity={1}
-                                  fill="url(#colorViews)"
-                                />
-                              </AreaChart>
-                            </ResponsiveContainer>
-                          </Box>
-                        ) : (
-                          <Box
-                            display="flex"
-                            justifyContent="center"
-                            alignItems="center"
-                            height="300px"
-                          >
-                            <Typography color="text.secondary">
-                              No view data available for this period
-                            </Typography>
-                          </Box>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </Grid>
+                {/* Tab Content */}
+                <TabPanel value={tabValue} index={0}>
+                  <OverviewTab
+                    viewTrendsData={viewTrendsData}
+                    engagementTrendsData={engagementTrendsData}
+                    isLoading={channelLoading}
+                    startDate={startDate}
+                    endDate={endDate}
+                  />
+                </TabPanel>
 
-                  {/* Engagement metrics */}
-                  <Grid item xs={12}>
-                    <Card sx={{ borderRadius: 2, overflow: 'hidden' }}>
-                      <CardHeader
-                        title="Engagement Metrics"
-                        subheader="Likes, comments and shares over time"
-                        sx={{ pb: 0 }}
-                      />
-                      <CardContent>
-                        {channelLoading ? (
-                          <Box
-                            display="flex"
-                            justifyContent="center"
-                            alignItems="center"
-                            height="300px"
-                          >
-                            <CircularProgress />
-                          </Box>
-                        ) : engagementTrendsData.length > 0 ? (
-                          <Box sx={{ width: '100%', height: 300 }}>
-                            <ResponsiveContainer>
-                              <LineChart
-                                data={engagementTrendsData}
-                                margin={{
-                                  top: 10,
-                                  right: 30,
-                                  left: 0,
-                                  bottom: 0,
-                                }}
-                              >
-                                <CartesianGrid
-                                  strokeDasharray="3 3"
-                                  vertical={false}
-                                  opacity={0.2}
-                                />
-                                <XAxis
-                                  dataKey="date"
-                                  tick={{ fontSize: 12 }}
-                                  tickFormatter={(value) => {
-                                    try {
-                                      return format(new Date(value), 'MMM d')
-                                    } catch (e) {
-                                      return value
-                                    }
-                                  }}
-                                />
-                                <YAxis tick={{ fontSize: 12 }} />
-                                <RechartsTooltip
-                                  formatter={(value: number, name: string) => [
-                                    `${value}`,
-                                    name,
-                                  ]}
-                                  labelFormatter={(label) => {
-                                    try {
-                                      return format(
-                                        new Date(label),
-                                        'MMM d, yyyy'
-                                      )
-                                    } catch (e) {
-                                      return label
-                                    }
-                                  }}
-                                />
-                                <Legend />
-                                <Line
-                                  type="monotone"
-                                  dataKey="likes"
-                                  stroke={theme.palette.secondary.main}
-                                  strokeWidth={2}
-                                  dot={{ r: 3 }}
-                                  activeDot={{ r: 5 }}
-                                />
-                                <Line
-                                  type="monotone"
-                                  dataKey="comments"
-                                  stroke={theme.palette.success.main}
-                                  strokeWidth={2}
-                                  dot={{ r: 3 }}
-                                  activeDot={{ r: 5 }}
-                                />
-                                <Line
-                                  type="monotone"
-                                  dataKey="shares"
-                                  stroke={theme.palette.info.main}
-                                  strokeWidth={2}
-                                  dot={{ r: 3 }}
-                                  activeDot={{ r: 5 }}
-                                />
-                              </LineChart>
-                            </ResponsiveContainer>
-                          </Box>
-                        ) : (
-                          <Box
-                            display="flex"
-                            justifyContent="center"
-                            alignItems="center"
-                            height="300px"
-                          >
-                            <Typography color="text.secondary">
-                              No engagement data available for this period
-                            </Typography>
-                          </Box>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                </Grid>
-              </TabPanel>
+                <TabPanel value={tabValue} index={1}>
+                  <PerformanceTab
+                    topVideosData={topVideosTableData}
+                    isLoading={topVideosLoading}
+                    formatNumber={formatNumber}
+                  />
+                </TabPanel>
 
-              {/* Performance Tab */}
-              <TabPanel value={tabValue} index={1}>
-                <Grid container spacing={3}>
-                  {/* Top Videos Table */}
-                  <Grid item xs={12}>
-                    <Card sx={{ borderRadius: 2, overflow: 'hidden' }}>
-                      <CardHeader
-                        title="Top Performing Videos"
-                        subheader={`Based on views from ${startDate ? format(startDate, 'MMM d, yyyy') : ''} to ${endDate ? format(endDate, 'MMM d, yyyy') : ''}`}
-                      />
-                      <CardContent>
-                        {topVideosLoading ? (
-                          <Box
-                            display="flex"
-                            justifyContent="center"
-                            alignItems="center"
-                            height="400px"
-                          >
-                            <CircularProgress />
-                          </Box>
-                        ) : topVideosTableData.length > 0 ? (
-                          <Box sx={{ height: 400, width: '100%' }}>
-                            <DataGrid
-                              rows={topVideosTableData}
-                              columns={topVideosColumns}
-                              initialState={{
-                                pagination: {
-                                  paginationModel: { page: 0, pageSize: 5 },
-                                },
-                                sorting: {
-                                  sortModel: [{ field: 'views', sort: 'desc' }],
-                                },
-                              }}
-                              pageSizeOptions={[5, 10]}
-                              disableRowSelectionOnClick
-                              sx={{
-                                '& .MuiDataGrid-cell:hover': {
-                                  color: theme.palette.secondary.main,
-                                },
-                              }}
-                            />
-                          </Box>
-                        ) : (
-                          <Box
-                            display="flex"
-                            justifyContent="center"
-                            alignItems="center"
-                            height="400px"
-                          >
-                            <Typography color="text.secondary">
-                              No video performance data available for this
-                              period
-                            </Typography>
-                          </Box>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </Grid>
+                <TabPanel value={tabValue} index={2}>
+                  <DemographicsTab
+                    ageData={demographicsData.ageData}
+                    genderData={demographicsData.genderData}
+                    isLoading={demographicsLoading}
+                  />
+                </TabPanel>
 
-                  {/* Video comparison chart */}
-                  <Grid item xs={12}>
-                    <Card sx={{ borderRadius: 2, overflow: 'hidden' }}>
-                      <CardHeader
-                        title="Video Performance Comparison"
-                        subheader="Views comparison across top videos"
-                      />
-                      <CardContent>
-                        {topVideosLoading ? (
-                          <Box
-                            display="flex"
-                            justifyContent="center"
-                            alignItems="center"
-                            height="300px"
-                          >
-                            <CircularProgress />
-                          </Box>
-                        ) : topVideosTableData.length > 0 ? (
-                          <Box sx={{ width: '100%', height: 300 }}>
-                            <ResponsiveContainer>
-                              <RechartsBarChart
-                                data={topVideosTableData.slice(0, 5)} // Take top 5
-                                margin={{
-                                  top: 20,
-                                  right: 30,
-                                  left: 20,
-                                  bottom: 70,
-                                }}
-                              >
-                                <CartesianGrid
-                                  strokeDasharray="3 3"
-                                  vertical={false}
-                                  opacity={0.2}
-                                />
-                                <XAxis
-                                  dataKey="title"
-                                  tick={{ fontSize: 12 }}
-                                  angle={-45}
-                                  textAnchor="end"
-                                  height={70}
-                                />
-                                <YAxis tick={{ fontSize: 12 }} />
-                                <RechartsTooltip
-                                  formatter={(value: number, name: string) => [
-                                    `${value}`,
-                                    name === 'views' ? 'Views' : name,
-                                  ]}
-                                />
-                                <Legend />
-                                <Bar
-                                  dataKey="views"
-                                  fill={theme.palette.primary.main}
-                                  name="Views"
-                                />
-                              </RechartsBarChart>
-                            </ResponsiveContainer>
-                          </Box>
-                        ) : (
-                          <Box
-                            display="flex"
-                            justifyContent="center"
-                            alignItems="center"
-                            height="300px"
-                          >
-                            <Typography color="text.secondary">
-                              No video comparison data available
-                            </Typography>
-                          </Box>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                </Grid>
-              </TabPanel>
-
-              {/* Demographics Tab */}
-              <TabPanel value={tabValue} index={2}>
-                <Grid container spacing={3}>
-                  {/* Message for small channels */}
-                  {!demographicsAnalytics?.rows?.length &&
-                    !demographicsLoading && (
-                      <Grid item xs={12}>
-                        <Alert severity="info" sx={{ mb: 2 }}>
-                          <Typography variant="subtitle2">
-                            Demographics data is not available
-                          </Typography>
-                          <Typography variant="body2">
-                            YouTube doesn't provide demographics data until your
-                            channel reaches a certain threshold of views.
-                          </Typography>
-                        </Alert>
-                      </Grid>
-                    )}
-
-                  {/* Age distribution chart */}
-                  <Grid item xs={12} md={6}>
-                    <Card
-                      sx={{
-                        borderRadius: 2,
-                        overflow: 'hidden',
-                        height: '100%',
-                      }}
-                    >
-                      <CardHeader
-                        title="Age Distribution"
-                        subheader="Viewer age groups percentage"
-                      />
-                      <CardContent>
-                        {demographicsLoading ? (
-                          <Box
-                            display="flex"
-                            justifyContent="center"
-                            alignItems="center"
-                            height="300px"
-                          >
-                            <CircularProgress />
-                          </Box>
-                        ) : demographicsData.ageData.length > 0 ? (
-                          <Box sx={{ width: '100%', height: 300 }}>
-                            <ResponsiveContainer>
-                              <PieChart>
-                                <Pie
-                                  data={demographicsData.ageData}
-                                  cx="50%"
-                                  cy="50%"
-                                  innerRadius={60}
-                                  outerRadius={80}
-                                  fill="#8884d8"
-                                  paddingAngle={5}
-                                  dataKey="value"
-                                  label={({ name, percent }) =>
-                                    `${name}: ${(percent * 100).toFixed(1)}%`
-                                  }
-                                >
-                                  {demographicsData.ageData.map(
-                                    (entry, index) => (
-                                      <Cell
-                                        key={`cell-${index}`}
-                                        fill={COLORS[index % COLORS.length]}
-                                      />
-                                    )
-                                  )}
-                                </Pie>
-                                <RechartsTooltip
-                                  formatter={(value: number) => [
-                                    `${value.toFixed(1)}%`,
-                                    'Percentage',
-                                  ]}
-                                />
-                                <Legend
-                                  formatter={(value) => (
-                                    <span
-                                      style={{
-                                        color: theme.palette.text.primary,
-                                      }}
-                                    >
-                                      {value}
-                                    </span>
-                                  )}
-                                />
-                              </PieChart>
-                            </ResponsiveContainer>
-                          </Box>
-                        ) : (
-                          <Box
-                            display="flex"
-                            justifyContent="center"
-                            alignItems="center"
-                            height="300px"
-                          >
-                            <Typography color="text.secondary">
-                              No age data available
-                            </Typography>
-                          </Box>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  {/* Gender distribution chart */}
-                  <Grid item xs={12} md={6}>
-                    <Card
-                      sx={{
-                        borderRadius: 2,
-                        overflow: 'hidden',
-                        height: '100%',
-                      }}
-                    >
-                      <CardHeader
-                        title="Gender Distribution"
-                        subheader="Viewer gender percentage"
-                      />
-                      <CardContent>
-                        {demographicsLoading ? (
-                          <Box
-                            display="flex"
-                            justifyContent="center"
-                            alignItems="center"
-                            height="300px"
-                          >
-                            <CircularProgress />
-                          </Box>
-                        ) : demographicsData.genderData.length > 0 ? (
-                          <Box sx={{ width: '100%', height: 300 }}>
-                            <ResponsiveContainer>
-                              <PieChart>
-                                <Pie
-                                  data={demographicsData.genderData}
-                                  cx="50%"
-                                  cy="50%"
-                                  innerRadius={60}
-                                  outerRadius={80}
-                                  fill="#8884d8"
-                                  paddingAngle={5}
-                                  dataKey="value"
-                                  label={({ name, percent }) =>
-                                    `${name}: ${(percent * 100).toFixed(1)}%`
-                                  }
-                                >
-                                  {demographicsData.genderData.map(
-                                    (entry, index) => (
-                                      <Cell
-                                        key={`cell-${index}`}
-                                        fill={COLORS[index % COLORS.length]}
-                                      />
-                                    )
-                                  )}
-                                </Pie>
-                                <RechartsTooltip
-                                  formatter={(value: number) => [
-                                    `${value.toFixed(1)}%`,
-                                    'Percentage',
-                                  ]}
-                                />
-                                <Legend
-                                  formatter={(value) => (
-                                    <span
-                                      style={{
-                                        color: theme.palette.text.primary,
-                                      }}
-                                    >
-                                      {value}
-                                    </span>
-                                  )}
-                                />
-                              </PieChart>
-                            </ResponsiveContainer>
-                          </Box>
-                        ) : (
-                          <Box
-                            display="flex"
-                            justifyContent="center"
-                            alignItems="center"
-                            height="300px"
-                          >
-                            <Typography color="text.secondary">
-                              No gender data available
-                            </Typography>
-                          </Box>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                </Grid>
-              </TabPanel>
-
-              {/* Published Videos Tab */}
-              <TabPanel value={tabValue} index={3}>
-                <Grid container spacing={3}>
-                  {publishedVideos.map(
-                    (video) =>
-                      video.youtubeData?.youtubeUrl && (
-                        <Grid item xs={12} md={6} lg={4} key={video.id}>
-                          <Card sx={{ borderRadius: 2, overflow: 'hidden' }}>
-                            <Box
-                              sx={{
-                                position: 'relative',
-                                paddingTop: '56.25%',
-                                bgcolor: 'black',
-                              }}
-                            >
-                              {video.thumbnailUrl ? (
-                                <Box
-                                  component="img"
-                                  src={video.thumbnailUrl}
-                                  alt={video.title || 'Video thumbnail'}
-                                  sx={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'cover',
-                                  }}
-                                />
-                              ) : (
-                                <Box
-                                  sx={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    bgcolor: 'grey.900',
-                                  }}
-                                >
-                                  <Movie
-                                    sx={{ fontSize: 60, color: 'grey.500' }}
-                                  />
-                                </Box>
-                              )}
-
-                              {/* YouTube badge */}
-                              <Box
-                                sx={{
-                                  position: 'absolute',
-                                  top: 10,
-                                  right: 10,
-                                  bgcolor: 'error.main',
-                                  color: 'white',
-                                  p: 0.5,
-                                  borderRadius: 1,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                }}
-                              >
-                                <YouTube fontSize="small" sx={{ mr: 0.5 }} />
-                                <Typography variant="caption" fontWeight="bold">
-                                  PUBLISHED
-                                </Typography>
-                              </Box>
-                            </Box>
-
-                            <CardContent>
-                              <Typography variant="h6" gutterBottom noWrap>
-                                {video.title || `Video ${video.id}`}
-                              </Typography>
-
-                              <Grid container spacing={2} sx={{ mt: 1 }}>
-                                <Grid item xs={4}>
-                                  <Box
-                                    sx={{
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      alignItems: 'center',
-                                    }}
-                                  >
-                                    <Visibility color="action" />
-                                    <Typography
-                                      variant="body2"
-                                      color="text.secondary"
-                                      sx={{ mt: 0.5 }}
-                                    >
-                                      Views
-                                    </Typography>
-                                    <Typography variant="h6">
-                                      {video.youtubeData?.statistics?.viewCount
-                                        ? formatNumber(
-                                            Number(
-                                              video.youtubeData.statistics
-                                                .viewCount
-                                            )
-                                          )
-                                        : '0'}
-                                    </Typography>
-                                  </Box>
-                                </Grid>
-
-                                <Grid item xs={4}>
-                                  <Box
-                                    sx={{
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      alignItems: 'center',
-                                    }}
-                                  >
-                                    <ThumbUp color="action" />
-                                    <Typography
-                                      variant="body2"
-                                      color="text.secondary"
-                                      sx={{ mt: 0.5 }}
-                                    >
-                                      Likes
-                                    </Typography>
-                                    <Typography variant="h6">
-                                      {video.youtubeData?.statistics?.likeCount
-                                        ? formatNumber(
-                                            Number(
-                                              video.youtubeData.statistics
-                                                .likeCount
-                                            )
-                                          )
-                                        : '0'}
-                                    </Typography>
-                                  </Box>
-                                </Grid>
-
-                                <Grid item xs={4}>
-                                  <Box
-                                    sx={{
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      alignItems: 'center',
-                                    }}
-                                  >
-                                    <Comment color="action" />
-                                    <Typography
-                                      variant="body2"
-                                      color="text.secondary"
-                                      sx={{ mt: 0.5 }}
-                                    >
-                                      Comments
-                                    </Typography>
-                                    <Typography variant="h6">
-                                      {video.youtubeData?.statistics
-                                        ?.commentCount
-                                        ? formatNumber(
-                                            Number(
-                                              video.youtubeData.statistics
-                                                .commentCount
-                                            )
-                                          )
-                                        : '0'}
-                                    </Typography>
-                                  </Box>
-                                </Grid>
-                              </Grid>
-
-                              <Button
-                                variant="outlined"
-                                color="error"
-                                startIcon={<YouTube />}
-                                sx={{ mt: 2, width: '100%' }}
-                                href={video.youtubeData?.youtubeUrl || '#'}
-                                target="_blank"
-                              >
-                                View on YouTube
-                              </Button>
-                            </CardContent>
-                          </Card>
-                        </Grid>
-                      )
-                  )}
-                </Grid>
-              </TabPanel>
-            </Paper>
-          </MotionBox>
+                <TabPanel value={tabValue} index={3}>
+                  <PublishedVideosTab
+                    videos={publishedVideos}
+                    formatNumber={formatNumber}
+                    isLoading={loadingPublishedVideos}
+                  />
+                </TabPanel>
+              </Paper>
+            </MotionBox>
+          </>
         )}
       </Container>
     </LocalizationProvider>
