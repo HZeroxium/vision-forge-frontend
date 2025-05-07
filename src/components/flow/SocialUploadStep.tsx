@@ -94,6 +94,7 @@ const SocialUploadStep: React.FC<SocialUploadStepProps> = ({
     youtubeUrl,
     publishingHistoryId,
     clearErrors,
+    resetUploadState, // Add this function from the hook
   } = useYouTube()
 
   // Pre-fill form with default values
@@ -155,6 +156,8 @@ const SocialUploadStep: React.FC<SocialUploadStepProps> = ({
   }
 
   const startNewVideo = () => {
+    // Reset YouTube upload state before starting a new video
+    resetUploadState() // Reset the YouTube upload state
     onComplete()
     router.push('/flow/generate-video')
   }

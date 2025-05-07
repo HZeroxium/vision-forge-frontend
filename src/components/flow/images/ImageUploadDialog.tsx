@@ -17,7 +17,7 @@ import {
   CardMedia,
   CardActionArea,
   CircularProgress,
-  Divider,
+  Pagination,
   useTheme,
 } from '@mui/material'
 import { useImages } from '@hooks/useImages'
@@ -65,17 +65,19 @@ const ImageUploadDialog: React.FC<ImageUploadDialogProps> = ({
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [tabValue, setTabValue] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
   const theme = useTheme()
 
   // Use the images hook to access user images
-  const { userImages, userLoading, loadUserImages } = useImages()
+  const { userImages, userLoading, userTotalPages, loadUserImages } =
+    useImages()
 
   // Load user's images when dialog opens on "My Images" tab
   useEffect(() => {
     if (open && tabValue === 1) {
-      loadUserImages(1, 20) // Load first page with 20 images
+      loadUserImages(currentPage, 20) // Load images for the current page
     }
-  }, [open, tabValue, loadUserImages])
+  }, [open, tabValue, loadUserImages, currentPage])
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -85,6 +87,9 @@ const ImageUploadDialog: React.FC<ImageUploadDialogProps> = ({
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
+    if (newValue === 1) {
+      setCurrentPage(1)
+    }
   }
 
   const handleUpload = async () => {
@@ -98,6 +103,13 @@ const ImageUploadDialog: React.FC<ImageUploadDialogProps> = ({
       onSelectExisting(imageUrl)
       onClose()
     }
+  }
+
+  const handlePageChange = (
+    event: React.ChangeEvent<unknown>,
+    value: number
+  ) => {
+    setCurrentPage(value)
   }
 
   // Reset selected file when dialog closes
@@ -170,35 +182,51 @@ const ImageUploadDialog: React.FC<ImageUploadDialogProps> = ({
               <CircularProgress />
             </Box>
           ) : userImages.length > 0 ? (
-            <Grid container spacing={2}>
-              {userImages.map((image) => (
-                <Grid item xs={6} sm={4} md={3} key={image.id}>
-                  <Card
-                    sx={{
-                      height: '100%',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        transform: 'scale(1.05)',
-                        boxShadow: theme.shadows[8],
-                      },
-                    }}
-                  >
-                    <CardActionArea
-                      onClick={() => handleSelectExisting(image.url)}
-                      sx={{ height: '100%' }}
+            <>
+              <Grid container spacing={2} sx={{ mt: 1 }}>
+                {userImages.map((image) => (
+                  <Grid item xs={6} sm={4} md={3} key={image.id}>
+                    <Card
+                      sx={{
+                        height: '100%',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          transform: 'scale(1.05)',
+                          boxShadow: theme.shadows[8],
+                        },
+                      }}
                     >
-                      <CardMedia
-                        component="img"
-                        height="140"
-                        image={image.url}
-                        alt={image.prompt || 'Image'}
-                        sx={{ objectFit: 'cover' }}
-                      />
-                    </CardActionArea>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
+                      <CardActionArea
+                        onClick={() => handleSelectExisting(image.url)}
+                        sx={{ height: '100%' }}
+                      >
+                        <CardMedia
+                          component="img"
+                          height="140"
+                          image={image.url}
+                          alt={image.prompt || 'Image'}
+                          sx={{ objectFit: 'cover' }}
+                        />
+                      </CardActionArea>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+
+              {userTotalPages > 1 && (
+                <Box display="flex" justifyContent="center" mt={3}>
+                  <Pagination
+                    count={userTotalPages}
+                    page={currentPage}
+                    onChange={handlePageChange}
+                    color="primary"
+                    size="medium"
+                    showFirstButton
+                    showLastButton
+                  />
+                </Box>
+              )}
+            </>
           ) : (
             <Box
               display="flex"
