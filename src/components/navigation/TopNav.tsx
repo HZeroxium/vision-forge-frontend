@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useTheme } from '@mui/material/styles'
+import { useTheme as useMuiTheme } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
+import useTheme from '@/hooks/useTheme'
 
 // Icons
 import HomeIcon from '@mui/icons-material/Home'
@@ -40,7 +41,6 @@ import {
   List,
   ListItem,
   ListItemButton,
-  Badge,
   Container,
   useScrollTrigger,
   Slide,
@@ -79,13 +79,13 @@ function TopNav() {
   const [visible, setVisible] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [authChecking, setAuthChecking] = useState(true)
-  const [darkMode, setDarkMode] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { isDarkMode, toggleTheme } = useTheme()
   const { user } = useAppSelector((state) => state.auth)
   const router = useRouter()
   const dispatch = useAppDispatch()
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const muiTheme = useMuiTheme()
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down('md'))
 
   // Menu anchors
   const [langAnchorEl, setLangAnchorEl] = useState<null | HTMLElement>(null)
@@ -99,12 +99,6 @@ function TopNav() {
   // Show component after client-side rendering
   useEffect(() => {
     setVisible(true)
-
-    // Check dark mode preference
-    const savedMode = localStorage.getItem('darkMode')
-    if (savedMode === 'true') {
-      setDarkMode(true)
-    }
   }, [])
 
   // Check auth after component has mounted on client
@@ -163,11 +157,6 @@ function TopNav() {
     handleProfileMenuClose()
     dispatch(logout())
     router.push('/')
-  }
-
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode)
-    localStorage.setItem('darkMode', (!darkMode).toString())
   }
 
   const handleDrawerToggle = () => {
@@ -325,11 +314,11 @@ function TopNav() {
           animate={{ y: 0 }}
           transition={{ duration: 0.3 }}
           sx={{
-            background: darkMode
+            background: isDarkMode
               ? 'linear-gradient(90deg, #0a1929 0%, #182848 100%)'
               : 'linear-gradient(90deg, #f8f9fa 0%, #ffffff 100%)',
-            color: darkMode ? '#fff' : 'inherit',
-            borderBottom: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
+            color: isDarkMode ? '#fff' : 'inherit',
+            borderBottom: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
             backdropFilter: 'blur(8px)',
           }}
         >
@@ -347,7 +336,7 @@ function TopNav() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 1,
-                    color: darkMode ? 'white' : 'primary.main',
+                    color: isDarkMode ? 'white' : 'primary.main',
                     flexGrow: { xs: 1, md: 0 },
                   }}
                   whileHover={{ scale: 1.03 }}
@@ -359,7 +348,7 @@ function TopNav() {
                     fontWeight="bold"
                     sx={{
                       display: { xs: 'none', sm: 'block' },
-                      background: darkMode
+                      background: isDarkMode
                         ? 'linear-gradient(90deg, #64B5F6 0%, #42A5F5 100%)'
                         : 'linear-gradient(90deg, #1976d2 30%, #2196f3 90%)',
                       WebkitBackgroundClip: 'text',
@@ -389,13 +378,13 @@ function TopNav() {
                         px: 2,
                         py: 1,
                         borderRadius: 2,
-                        color: darkMode ? 'white' : 'text.primary',
+                        color: isDarkMode ? 'white' : 'text.primary',
                         display: 'flex',
                         alignItems: 'center',
                         gap: 0.5,
                       }}
                       whileHover={{
-                        backgroundColor: darkMode
+                        backgroundColor: isDarkMode
                           ? 'rgba(255,255,255,0.1)'
                           : 'rgba(0,0,0,0.04)',
                         scale: 1.05,
@@ -435,11 +424,11 @@ function TopNav() {
                 {/* Toggle Dark Mode */}
                 <MotionIconButton
                   color="inherit"
-                  onClick={toggleDarkMode}
+                  onClick={toggleTheme}
                   whileHover={{ rotate: 180, transition: { duration: 0.3 } }}
                   whileTap={{ scale: 0.9 }}
                 >
-                  {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
+                  {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
                 </MotionIconButton>
 
                 {/* Language Switcher */}
@@ -455,7 +444,7 @@ function TopNav() {
                         endIcon={<KeyboardArrowDownIcon />}
                         sx={{
                           mx: 1,
-                          color: darkMode ? 'white' : 'text.primary',
+                          color: isDarkMode ? 'white' : 'text.primary',
                           textTransform: 'none',
                         }}
                       >
@@ -539,7 +528,7 @@ function TopNav() {
                         onClick={handleProfileMenuOpen}
                         sx={{
                           textTransform: 'none',
-                          color: darkMode ? 'white' : 'text.primary',
+                          color: isDarkMode ? 'white' : 'text.primary',
                         }}
                         endIcon={<KeyboardArrowDownIcon />}
                       >

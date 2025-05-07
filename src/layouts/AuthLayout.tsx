@@ -15,12 +15,9 @@ import {
 } from '@mui/material'
 import Grid from '@mui/material/Grid2'
 import { motion } from 'framer-motion'
-import {
-  ArrowBack,
-  LightMode,
-  DarkMode,
-  AutoAwesome,
-} from '@mui/icons-material'
+import { ArrowBack, AutoAwesome } from '@mui/icons-material'
+import useThemeHook from '@/hooks/useTheme'
+import ThemeToggle from '@/components/theme/ThemeToggle'
 
 // Create motion components
 const MotionBox = motion(Box)
@@ -38,7 +35,9 @@ export default function AuthLayout({
   const theme = useTheme()
   const router = useRouter()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const isDark = theme.palette.mode === 'dark'
+
+  // Use our custom hook instead of local state
+  const { isDarkMode } = useThemeHook()
 
   // Animation variants
   const contentVariants = {
@@ -54,9 +53,9 @@ export default function AuthLayout({
         display: 'flex',
         position: 'relative',
         background: `linear-gradient(135deg, ${
-          isDark ? 'rgba(13,15,20,0.95)' : 'rgba(240,242,245,0.9)'
+          isDarkMode ? 'rgba(13,15,20,0.95)' : 'rgba(240,242,245,0.9)'
         } 0%, ${
-          isDark ? 'rgba(20,25,40,0.95)' : 'rgba(250,252,255,0.9)'
+          isDarkMode ? 'rgba(20,25,40,0.95)' : 'rgba(250,252,255,0.9)'
         } 100%)`,
         overflow: 'hidden',
       }}
@@ -121,20 +120,8 @@ export default function AuthLayout({
           </IconButton>
         </Tooltip>
 
-        <Tooltip title={isDark ? 'Light mode' : 'Dark mode'}>
-          <IconButton
-            // Toggle theme action would go here
-            component={motion.button}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            sx={{
-              bgcolor: theme.palette.background.paper,
-              boxShadow: theme.shadows[2],
-            }}
-          >
-            {isDark ? <LightMode /> : <DarkMode />}
-          </IconButton>
-        </Tooltip>
+        {/* Use our ThemeToggle component instead */}
+        <ThemeToggle />
       </Box>
 
       {/* Main content */}
@@ -168,7 +155,6 @@ export default function AuthLayout({
               style={{ display: 'inline-block', marginBottom: 24 }}
             >
               <MotionBox
-                component="img"
                 src="/images/logo.webp"
                 alt="Vision Forge"
                 whileHover={{ scale: 1.05 }}
@@ -183,7 +169,6 @@ export default function AuthLayout({
 
             <MotionTypography
               variant={isMobile ? 'h5' : 'h3'}
-              component="h1"
               fontWeight="bold"
               sx={{
                 mb: 2,
