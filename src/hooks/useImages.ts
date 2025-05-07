@@ -47,7 +47,7 @@ export const useImages = () => {
 
   // Create a new image
   const createImage = useCallback(
-    (data: { prompt: string; style: string }) => {
+    (data: { prompt: string; style: string; url?: string }) => {
       return dispatch(createImageAsync(data)).unwrap()
     },
     [dispatch]

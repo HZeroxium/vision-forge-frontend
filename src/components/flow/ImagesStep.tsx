@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Box, Typography, Chip, Divider } from '@mui/material'
 import LoadingIndicator from '../common/LoadingIndicator'
 import { useStorage } from '@hooks/useStorage'
+import { useImages } from '@hooks/useImages'
 
 // Import types
 import { Block } from './types/BlockTypes'
@@ -31,7 +32,10 @@ interface ImagesStepProps {
   onProceedToAudio: () => void
   isRegeneratingImages?: boolean
   isGeneratingInitialImages?: boolean
-  onSaveAllScripts?: (scripts: string[]) => Promise<boolean>
+  onSaveAllScripts?: (
+    scripts: string[],
+    imageUrls: string[]
+  ) => Promise<boolean>
 }
 
 const ImagesStep: React.FC<ImagesStepProps> = ({
@@ -46,11 +50,15 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
   // Storage hook for uploading images
   const storage = useStorage()
 
+  // Images hook for database operations
+  const { createImage } = useImages()
+
   // State for blocks management
   const [blocks, setBlocks] = useState<Block[]>([])
   const [originalBlocks, setOriginalBlocks] = useState<Block[]>([])
   const [blocksReordered, setBlocksReordered] = useState<boolean>(false)
   const [originalScripts, setOriginalScripts] = useState<string[]>([])
+  const [originalImageUrls, setOriginalImageUrls] = useState<string[]>([])
 
   // UI state
   const [showPrompt, setShowPrompt] = useState<boolean>(false)
@@ -92,11 +100,15 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
         setBlocks(newBlocks)
         setOriginalBlocks(JSON.parse(JSON.stringify(newBlocks)))
 
-        // Store original scripts for comparison
+        // Store original data for comparison and restoration
         setOriginalScripts([...imagesData.scripts])
+        setOriginalImageUrls([...imagesData.image_urls])
 
         // Initialize loading state for images
         setLoadingImages(Array(imagesData.image_urls.length).fill(false))
+
+        // Reset reordering flag when loading new images
+        setBlocksReordered(false)
       }
     }
   }, [imagesData, isRegeneratingImages])
@@ -178,17 +190,19 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
     setSaveError(null)
 
     try {
-      // Extract scripts in current order to send to parent
+      // Extract current data in the proper order from blocks
       const currentScripts = blocks.map((block) => block.script)
+      const currentImageUrls = blocks.map((block) => block.imageUrl)
 
       // If the parent component provided a save function, use it
       if (onSaveAllScripts) {
-        const success = await onSaveAllScripts(currentScripts)
+        const success = await onSaveAllScripts(currentScripts, currentImageUrls)
 
         if (success) {
           // After successful save, update original state to match current
           setOriginalBlocks(JSON.parse(JSON.stringify(blocks)))
           setOriginalScripts([...currentScripts])
+          setOriginalImageUrls([...currentImageUrls])
           setBlocksReordered(false)
           setShowSaveNotification(true)
         } else {
@@ -197,7 +211,8 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
       } else {
         // No save function provided, just update original state
         setOriginalBlocks(JSON.parse(JSON.stringify(blocks)))
-        setOriginalScripts(blocks.map((b) => b.script))
+        setOriginalScripts([...currentScripts])
+        setOriginalImageUrls([...currentImageUrls])
         setBlocksReordered(false)
         setShowSaveNotification(true)
       }
@@ -208,6 +223,19 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
       )
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleProceedClick = () => {
+    // If there are unsaved changes, save them before proceeding
+    if (hasEditedScripts) {
+      handleSaveAllChanges()
+    }
+
+    if (isRegeneratingImages || isGeneratingInitialImages) {
+      setShowIncompleteAlert(true)
+    } else {
+      onProceedToAudio()
     }
   }
 
@@ -243,19 +271,6 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
     await onRegenerateImages()
   }
 
-  const handleProceedClick = () => {
-    // If there are unsaved changes, save them before proceeding
-    if (hasEditedScripts) {
-      handleSaveAllChanges()
-    }
-
-    if (isRegeneratingImages || isGeneratingInitialImages) {
-      setShowIncompleteAlert(true)
-    } else {
-      onProceedToAudio()
-    }
-  }
-
   // Block Management
   const handleReorderBlocks = (newBlocks: Block[]) => {
     setBlocks(newBlocks)
@@ -280,20 +295,31 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
     setBlocksReordered(true)
   }
 
-  // Image Upload handlers
-  const handleOpenUploadDialog = () => {
-    setUploadDialogOpen(true)
-    setUploadProgress(0)
-    setUploadError(null)
+  // Handle selecting an existing image
+  const handleSelectExistingImage = (imageUrl: string) => {
+    // Replace the image URL in the current block
+    const newBlocks = [...blocks]
+    newBlocks[currentImageIndex] = {
+      ...newBlocks[currentImageIndex],
+      imageUrl: imageUrl,
+      isCustomImage: true,
+    }
+
+    setBlocks(newBlocks)
+    setUploadDialogOpen(false)
+
+    // Mark as edited
+    setBlocksReordered(true)
   }
 
+  // Enhanced upload handler that also adds the image to the database
   const handleUploadImage = async (file: File) => {
     setIsUploading(true)
     setUploadProgress(0)
     setUploadError(null)
 
     try {
-      // Use storage hook to upload file
+      // 1. Upload the file to storage
       const result = await storage.uploadFile(
         file,
         FileType.IMAGE,
@@ -302,7 +328,14 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
         (progress) => setUploadProgress(progress)
       )
 
-      // Replace the image URL in the current block
+      // 2. Add the image to the database
+      await createImage({
+        prompt: blocks[currentImageIndex]?.prompt || 'Custom image',
+        style: 'custom',
+        url: result.url,
+      })
+
+      // 3. Replace the image URL in the current block
       const newBlocks = [...blocks]
       newBlocks[currentImageIndex] = {
         ...newBlocks[currentImageIndex],
@@ -312,8 +345,6 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
 
       setBlocks(newBlocks)
       setUploadDialogOpen(false)
-
-      // Mark as edited
       setBlocksReordered(true)
     } catch (error) {
       console.error('Error uploading image:', error)
@@ -323,20 +354,16 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
     }
   }
 
-  // Add Block Dialog handlers
-  const handleOpenAddBlockDialog = () => {
-    setAddBlockDialogOpen(true)
-    setUploadError(null)
-  }
-
+  // Enhanced add block handler that works with both new and existing images
   const handleAddBlock = async (
     script: string,
     prompt: string,
-    file: File | null
+    file: File | null,
+    existingImageUrl?: string
   ) => {
-    let imageUrl = ''
+    let imageUrl = existingImageUrl || ''
 
-    // If file is selected, upload it
+    // If file is selected, upload it and add to database
     if (file) {
       setIsUploading(true)
       try {
@@ -347,6 +374,13 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
           'images/user-uploads/'
         )
         imageUrl = result.url
+
+        // Add the image to the database
+        await createImage({
+          prompt: prompt || 'Custom image',
+          style: 'custom',
+          url: imageUrl,
+        })
       } catch (error) {
         console.error('Error uploading image for new block:', error)
         setUploadError('Failed to upload image for new block.')
@@ -362,7 +396,7 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
       imageUrl: imageUrl || '/placeholder-image.jpg', // Use uploaded image or placeholder
       script: script,
       prompt: prompt || 'Custom block',
-      isCustomImage: !!file,
+      isCustomImage: !!file || !!existingImageUrl,
     }
 
     // Add to blocks
@@ -377,6 +411,19 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
 
     // Mark as changed
     setBlocksReordered(true)
+  }
+
+  // Image Upload handlers
+  const handleOpenUploadDialog = () => {
+    setUploadDialogOpen(true)
+    setUploadProgress(0)
+    setUploadError(null)
+  }
+
+  // Add Block Dialog handlers
+  const handleOpenAddBlockDialog = () => {
+    setAddBlockDialogOpen(true)
+    setUploadError(null)
   }
 
   return (
@@ -476,17 +523,18 @@ const ImagesStep: React.FC<ImagesStepProps> = ({
         onCloseSaveError={() => setSaveError(null)}
       />
 
-      {/* Image Upload Dialog */}
+      {/* Image Upload Dialog with enhanced functionality */}
       <ImageUploadDialog
         open={uploadDialogOpen}
         onClose={() => setUploadDialogOpen(false)}
         onUpload={handleUploadImage}
+        onSelectExisting={handleSelectExistingImage}
         isUploading={isUploading}
         error={uploadError}
         uploadProgress={uploadProgress}
       />
 
-      {/* Add Block Dialog */}
+      {/* Add Block Dialog with enhanced functionality */}
       <AddBlockDialog
         open={addBlockDialogOpen}
         onClose={() => setAddBlockDialogOpen(false)}

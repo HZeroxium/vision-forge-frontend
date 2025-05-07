@@ -20,6 +20,11 @@ import {
   Divider,
   Snackbar,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material'
 import {
   AddCircle as AddCircleIcon,
@@ -84,6 +89,7 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
   const [showUpdateSuccess, setShowUpdateSuccess] = useState(false)
   const [showUpdateError, setShowUpdateError] = useState(false)
   const [showNoScriptAlert, setShowNoScriptAlert] = useState(false)
+  const [showResetDialog, setShowResetDialog] = useState(false)
 
   const handleUpdateScript = async () => {
     console.log('Starting script update...')
@@ -115,13 +121,53 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
     onProceedToImages()
   }
 
+  const handleResetFlow = () => {
+    if (scriptExists) {
+      setShowResetDialog(true)
+    } else {
+      onReset()
+    }
+  }
+
+  const confirmResetFlow = () => {
+    setShowResetDialog(false)
+    onReset()
+  }
+
   const hasSources = sources && sources.length > 0
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        Create Your Script
-      </Typography>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={2}
+      >
+        <Typography variant="h6">Create Your Script</Typography>
+
+        {/* Reset Flow button always available */}
+        <Tooltip
+          title={
+            isGeneratingScript || isUpdatingScript
+              ? 'Please wait for current operation to complete'
+              : 'Reset the entire flow'
+          }
+        >
+          <span>
+            <Button
+              variant="outlined"
+              color="secondary"
+              startIcon={<RestartAltIcon />}
+              onClick={handleResetFlow}
+              disabled={isGeneratingScript || isUpdatingScript}
+              size="small"
+            >
+              Reset Flow
+            </Button>
+          </span>
+        </Tooltip>
+      </Box>
 
       <Box sx={{ mb: 3 }}>
         <TextField
@@ -201,9 +247,9 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
       </Box>
 
       {!scriptExists ? (
-        <Box display="flex" gap={2}>
+        <Box display="flex" justifyContent="center">
           <Tooltip title={!title ? 'Please enter a title first' : ''}>
-            <span style={{ width: '100%' }}>
+            <span style={{ width: '100%', maxWidth: '500px' }}>
               <Button
                 variant="contained"
                 color="primary"
@@ -221,27 +267,6 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
                 {isGeneratingScript
                   ? 'Generating Script...'
                   : 'Generate Script'}
-              </Button>
-            </span>
-          </Tooltip>
-
-          <Tooltip
-            title={
-              isGeneratingScript
-                ? 'Please wait for script generation to complete'
-                : ''
-            }
-          >
-            <span>
-              <Button
-                variant="outlined"
-                color="secondary"
-                startIcon={<RestartAltIcon />}
-                onClick={onReset}
-                disabled={isGeneratingScript}
-                sx={{ mb: 2 }}
-              >
-                Reset Flow
               </Button>
             </span>
           </Tooltip>
@@ -328,16 +353,50 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
             </Button>
           </Box>
 
-          {/* Sources List */}
+          {/* Sources List - Always display if sources exist */}
           {hasSources && (
             <>
               <Divider sx={{ my: 3 }} />
+              <Typography
+                variant="subtitle1"
+                gutterBottom
+                sx={{ display: 'flex', alignItems: 'center' }}
+              >
+                <FactCheckIcon sx={{ mr: 1 }} /> Sources
+              </Typography>
               <SourcesList sources={sources} />
             </>
           )}
         </>
       )}
 
+      {/* Replace Snackbar with Dialog for reset confirmation */}
+      <Dialog
+        open={showResetDialog}
+        onClose={() => setShowResetDialog(false)}
+        aria-labelledby="reset-dialog-title"
+        aria-describedby="reset-dialog-description"
+      >
+        <DialogTitle id="reset-dialog-title">
+          Reset Flow Confirmation
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="reset-dialog-description">
+            This will reset your entire flow and lose all changes. Are you sure
+            you want to continue?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowResetDialog(false)} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={confirmResetFlow} color="error" variant="contained">
+            Reset
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Notifications */}
       <Snackbar
         open={showNoScriptAlert}
         autoHideDuration={4000}

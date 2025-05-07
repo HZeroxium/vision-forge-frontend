@@ -254,8 +254,15 @@ export default function GenerateVideoFlowPage() {
     setLoading(true)
 
     try {
+      // Update the script content
       await updateScript(script.id, { content: localContent })
       console.log('Script update successful')
+
+      // Important: Make sure to retain sources by explicitly updating local state
+      // This ensures the UI shows the sources even after an update
+      if (script.sources) {
+        setSources(script.sources)
+      }
     } catch (err: any) {
       console.error('Failed to update script:', err)
       setError(err.message || 'Failed to update script')
@@ -326,6 +333,23 @@ export default function GenerateVideoFlowPage() {
       setLoading(false)
       setIsRegeneratingImages(false)
     }
+  }
+
+  // Handle saving all scripts and image reordering
+  const handleSaveAllScripts = async (
+    scripts: string[],
+    imageUrls: string[]
+  ) => {
+    if (imagesData) {
+      // Update imagesData with the new scripts and potentially reordered image URLs
+      setImagesData({
+        ...imagesData,
+        scripts: scripts,
+        image_urls: imageUrls,
+      })
+      return true
+    }
+    return false
   }
 
   // --- STEP NAVIGATION HANDLERS ---
@@ -558,6 +582,7 @@ export default function GenerateVideoFlowPage() {
             onProceedToAudio={() => navigateToStep('audio')}
             isRegeneratingImages={isRegeneratingImages}
             isGeneratingInitialImages={isGeneratingInitialImages}
+            onSaveAllScripts={handleSaveAllScripts}
           />
         </PageTransition>
 

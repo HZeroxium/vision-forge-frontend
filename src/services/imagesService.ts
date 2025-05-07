@@ -24,6 +24,7 @@ export interface ImagesPaginationDto {
 export const createImage = async (data: {
   prompt: string
   style: string
+  url?: string
 }): Promise<Image> => {
   const response = await api.post('/images', data)
   return response.data
