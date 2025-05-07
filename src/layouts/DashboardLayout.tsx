@@ -1,3 +1,5 @@
+// /src/layouts/DashboardLayout.tsx
+
 'use client'
 import React, { useState } from 'react'
 import { Box, Container, useMediaQuery, useTheme } from '@mui/material'
@@ -32,7 +34,8 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
           display: 'flex',
           flexDirection: 'column',
           flexGrow: 1,
-          width: { xs: '100%', md: 'calc(100% - 72px)' },
+          width: { xs: '100%', md: `calc(100% - ${theme.spacing(9)})` },
+          ml: { xs: 0, md: 0 }, // Remove any margin
           transition: theme.transitions.create(['width', 'margin'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
@@ -40,11 +43,10 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
         }}
       >
         {/* Header */}
-        <Header />
+        {/* <Header /> */}
 
         {/* Main content with animation */}
         <MotionMain
-          component="main"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}

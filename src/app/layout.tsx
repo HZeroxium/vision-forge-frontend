@@ -7,6 +7,7 @@ import Providers from '@components/providers/Providers'
 import { NextI18nextProvider } from '@/components/providers/NextI18nextProvider'
 import ClientTopNav from '@/components/navigation/ClientTopNav'
 import { Toaster } from 'react-hot-toast'
+import DashboardLayout from '@/layouts/DashboardLayout'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
