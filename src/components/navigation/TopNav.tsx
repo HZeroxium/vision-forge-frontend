@@ -733,20 +733,20 @@ function TopNav() {
                     <Tooltip title="Change language">
                       <Button
                         onClick={handleLangMenuOpen}
-                        startIcon={
-                          <Box
-                            component="img"
-                            src={
-                              i18n.language === 'vi'
-                                ? '/images/flags/vn.svg'
-                                : '/images/flags/us.svg'
-                            }
-                            alt={
-                              i18n.language === 'vi' ? 'Tiếng Việt' : 'English'
-                            }
-                            sx={{ width: 20, height: 20, borderRadius: '50%' }}
-                          />
-                        }
+                        // startIcon={
+                        //   <Box
+                        //     component="img"
+                        //     src={
+                        //       i18n.language === 'vi'
+                        //         ? '/images/flags/vn.svg'
+                        //         : '/images/flags/us.svg'
+                        //     }
+                        //     alt={
+                        //       i18n.language === 'vi' ? 'Tiếng Việt' : 'English'
+                        //     }
+                        //     sx={{ width: 20, height: 20, borderRadius: '50%' }}
+                        //   />
+                        // }
                         endIcon={<KeyboardArrowDownIcon />}
                         sx={{
                           mx: 1,

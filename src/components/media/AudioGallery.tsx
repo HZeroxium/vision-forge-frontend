@@ -24,6 +24,7 @@ import {
   Fade,
   Badge,
   Alert,
+  alpha,
 } from '@mui/material'
 import {
   Search,
@@ -36,6 +37,8 @@ import {
   ViewModule,
   ArrowUpward,
   Audiotrack,
+  MusicNote,
+  QueueMusic,
 } from '@mui/icons-material'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
@@ -47,6 +50,8 @@ import { staggerContainer, staggerFast, fadeIn } from '@/utils/animations'
 const MotionBox = motion(Box)
 const MotionPaper = motion(Paper)
 const MotionButton = motion(Button)
+const MotionTypography = motion(Typography)
+const MotionIconButton = motion(IconButton)
 
 // Define the gallery layout types
 type LayoutType = 'grid' | 'list' | 'compact'
@@ -91,7 +96,8 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const isTablet = useMediaQuery(theme.breakpoints.down('md'))
 
-  const skeletonArray = Array.from({ length: 6 }, (_, i) => i)
+  // Increase skeleton array size for a better loading experience
+  const skeletonArray = Array.from({ length: 12 }, (_, i) => i)
 
   // Determine which data, loading state, and error to use based on mode
   const currentAudios = mode === 'all' ? audios : userAudios
@@ -198,20 +204,22 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
     return 0
   })
 
-  // Get grid columns based on layout and screen size
+  // Get grid columns based on layout and screen size - fixed for even distribution
   const getGridItemSize = () => {
     if (layout === 'list') {
       return { xs: 12 }
     }
     if (layout === 'compact') {
-      return { xs: 6, sm: 4, md: 3, lg: 2 }
+      // Ensure we have even rows with 2, 3, 4, or 6 items per row depending on screen size
+      return { xs: 6, sm: 4, md: 3, lg: 2, xl: 2 }
     }
-    return { xs: 12, sm: 6, md: 4, lg: 3 }
+    // For standard grid, ensure we have 1, 2, 3, or 4 items per row
+    return { xs: 12, sm: 6, md: 4, lg: 3, xl: 3 }
   }
 
   const getGridGap = () => {
-    if (layout === 'compact') return 1
-    return 2
+    if (layout === 'compact') return 1.5
+    return 3
   }
 
   const getLayoutIcon = (layoutType: LayoutType) => {
@@ -231,15 +239,17 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
       initial="hidden"
       animate="visible"
       sx={{
-        p: 2,
+        p: 2.5,
         mb: 3,
-        borderRadius: 2,
+        borderRadius: 3,
         display: 'flex',
         flexDirection: { xs: 'column', sm: 'row' },
         alignItems: { xs: 'stretch', sm: 'center' },
         gap: 2,
-        backgroundColor: 'background.paper',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+        backdropFilter: 'blur(10px)',
+        backgroundColor: alpha(theme.palette.background.paper, 0.8),
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+        border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
       }}
     >
       <TextField
@@ -254,8 +264,10 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
           '& .MuiOutlinedInput-root': {
             borderRadius: 2,
             transition: 'all 0.3s ease',
+            backdropFilter: 'blur(8px)',
+            backgroundColor: alpha(theme.palette.background.default, 0.6),
             '&:hover': {
-              boxShadow: '0 0 0 2px rgba(0,0,0,0.05)',
+              boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
             },
             '&.Mui-focused': {
               boxShadow: `0 0 0 2px ${theme.palette.primary.light}`,
@@ -265,7 +277,13 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <Search color="action" />
+              <Search
+                color="action"
+                sx={{
+                  opacity: 0.8,
+                  color: theme.palette.primary.main,
+                }}
+              />
             </InputAdornment>
           ),
           endAdornment: searchTerm ? (
@@ -274,6 +292,11 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
                 size="small"
                 onClick={() => setSearchTerm('')}
                 edge="end"
+                sx={{
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                  },
+                }}
               >
                 <Close fontSize="small" />
               </IconButton>
@@ -285,12 +308,29 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
       <Box
         sx={{
           display: 'flex',
-          gap: 1,
+          gap: 1.5,
           flexWrap: { xs: 'wrap', sm: 'nowrap' },
           alignItems: 'center',
         }}
       >
-        <FormControl size="small" sx={{ minWidth: 130 }}>
+        <FormControl
+          size="small"
+          sx={{
+            minWidth: 150,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+              backdropFilter: 'blur(8px)',
+              backgroundColor: alpha(theme.palette.background.default, 0.6),
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
+              },
+              '&.Mui-focused': {
+                boxShadow: `0 0 0 2px ${theme.palette.primary.light}`,
+              },
+            },
+          }}
+        >
           <InputLabel id="sort-by-label" sx={{ borderRadius: 2 }}>
             Sort by
           </InputLabel>
@@ -300,7 +340,14 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
             label="Sort by"
             onChange={handleSortChange}
             startAdornment={
-              <SortRounded fontSize="small" sx={{ mr: 0.5, opacity: 0.7 }} />
+              <SortRounded
+                fontSize="small"
+                sx={{
+                  mr: 0.5,
+                  color: theme.palette.primary.main,
+                  opacity: 0.8,
+                }}
+              />
             }
             sx={{ borderRadius: 2 }}
           >
@@ -313,15 +360,21 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
 
         {filterCount > 0 && (
           <Tooltip title="Clear all filters">
-            <IconButton
+            <MotionIconButton
               onClick={handleClearFilters}
               color="primary"
-              component={motion.button}
-              whileHover={{ rotate: 180, transition: { duration: 0.3 } }}
+              sx={{
+                backdropFilter: 'blur(8px)',
+                backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                '&:hover': {
+                  backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                },
+              }}
+              whileHover={{ rotate: 180, transition: { duration: 0.5 } }}
               whileTap={{ scale: 0.9 }}
             >
               <ClearAll />
-            </IconButton>
+            </MotionIconButton>
           </Tooltip>
         )}
 
@@ -332,9 +385,11 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
               gap: 0.5,
               p: 0.5,
               border: 1,
-              borderColor: 'divider',
+              borderColor: alpha(theme.palette.primary.main, 0.2),
               borderRadius: 2,
               ml: { xs: 0, sm: 1 },
+              backdropFilter: 'blur(8px)',
+              backgroundColor: alpha(theme.palette.background.default, 0.4),
             }}
           >
             {(['grid', 'compact', 'list'] as LayoutType[]).map((layoutType) => (
@@ -342,21 +397,22 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
                 key={layoutType}
                 title={`${layoutType.charAt(0).toUpperCase() + layoutType.slice(1)} view`}
               >
-                <IconButton
+                <MotionIconButton
                   size="small"
                   onClick={() => handleLayoutChange(layoutType)}
                   color={layout === layoutType ? 'primary' : 'default'}
                   sx={{
                     bgcolor:
-                      layout === layoutType ? 'action.selected' : 'transparent',
-                    transition: 'all 0.2s ease',
+                      layout === layoutType
+                        ? alpha(theme.palette.primary.main, 0.2)
+                        : 'transparent',
+                    transition: 'all 0.3s ease',
                   }}
-                  component={motion.button}
-                  whileHover={{ scale: 1.1 }}
+                  whileHover={{ scale: 1.15 }}
                   whileTap={{ scale: 0.9 }}
                 >
                   {getLayoutIcon(layoutType)}
-                </IconButton>
+                </MotionIconButton>
               </Tooltip>
             ))}
           </Box>
@@ -371,10 +427,11 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
         <Alert
           severity="error"
           sx={{
-            mb: 2,
+            mb: 3,
             width: '100%',
-            maxWidth: 500,
-            borderRadius: 2,
+            maxWidth: 550,
+            borderRadius: 3,
+            boxShadow: '0 6px 20px rgba(0,0,0,0.08)',
           }}
         >
           Oops! Failed to load audio files. {currentError}
@@ -386,8 +443,15 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
             clearCurrentError()
             loadCurrentAudios(currentPage, 12)
           }}
-          sx={{ mt: 2 }}
-          whileHover={{ scale: 1.05 }}
+          sx={{
+            mt: 2,
+            borderRadius: 2,
+            px: 3,
+            py: 1.2,
+            boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
+            backgroundImage: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+          }}
+          whileHover={{ scale: 1.05, boxShadow: '0 6px 15px rgba(0,0,0,0.2)' }}
           whileTap={{ scale: 0.95 }}
         >
           Retry Loading
@@ -409,42 +473,78 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          mb: 2,
+          mb: 3,
         }}
       >
-        <Typography
+        <MotionTypography
           variant="h6"
-          component={motion.h2}
           initial={{ x: -20, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
+            fontWeight: 500,
+            color: theme.palette.text.primary,
+          }}
         >
-          <Audiotrack color="primary" />
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${alpha(theme.palette.primary.dark, 0.8)} 100%)`,
+              boxShadow: `0 4px 10px ${alpha(theme.palette.primary.main, 0.3)}`,
+            }}
+          >
+            <QueueMusic sx={{ color: 'white', fontSize: 22 }} />
+          </Box>
           {currentLoading ? (
             <Box
               component="span"
               sx={{ display: 'flex', alignItems: 'center' }}
             >
-              <CircularProgress size={16} sx={{ mr: 1 }} /> Loading...
+              <CircularProgress
+                size={18}
+                sx={{ mr: 1.5, color: theme.palette.primary.main }}
+              />
+              Loading...
             </Box>
           ) : (
             `${filteredAudios.length} ${filteredAudios.length === 1 ? 'audio' : 'audios'} found`
           )}
-        </Typography>
+        </MotionTypography>
 
         {isMobile && (
           <Tooltip title={filterOpen ? 'Hide filters' : 'Show filters'}>
-            <Badge color="primary" badgeContent={filterCount} max={9}>
-              <IconButton
+            <Badge
+              color="primary"
+              badgeContent={filterCount}
+              max={9}
+              sx={{
+                '& .MuiBadge-badge': {
+                  fontWeight: 'bold',
+                },
+              }}
+            >
+              <MotionIconButton
                 onClick={toggleFilterView}
-                color="primary"
-                component={motion.button}
-                whileHover={{ rotate: 15 }}
+                sx={{
+                  color: theme.palette.primary.main,
+                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                  },
+                }}
+                whileHover={{ rotate: 15, scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
               >
                 <FilterAlt />
-              </IconButton>
+              </MotionIconButton>
             </Badge>
           </Tooltip>
         )}
@@ -467,25 +567,88 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
                   <MotionBox
                     variants={fadeIn}
                     sx={{
-                      borderRadius: 3,
+                      borderRadius: layout === 'list' ? 2 : 3,
                       overflow: 'hidden',
-                      height: layout === 'list' ? 100 : 250,
-                      boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+                      height:
+                        layout === 'list'
+                          ? 100
+                          : layout === 'compact'
+                            ? 200
+                            : 260,
+                      boxShadow: '0 8px 20px rgba(0,0,0,0.06)',
+                      background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.8)} 0%, ${alpha(theme.palette.background.default, 0.6)} 100%)`,
+                      backdropFilter: 'blur(10px)',
+                      border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                      display: 'flex',
+                      flexDirection: 'column',
                     }}
                   >
                     <Skeleton
                       variant="rectangular"
                       width="100%"
-                      height={layout === 'list' ? 100 : 140}
+                      height={
+                        layout === 'list'
+                          ? 100
+                          : layout === 'compact'
+                            ? 100
+                            : 140
+                      }
                       animation="wave"
+                      sx={{
+                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                        opacity: 0.7,
+                      }}
                     />
                     {layout !== 'list' && (
-                      <>
-                        <Box sx={{ p: 2 }}>
-                          <Skeleton variant="text" width="60%" height={24} />
-                          <Skeleton variant="text" width="80%" height={16} />
-                        </Box>
-                      </>
+                      <Box sx={{ p: 2, flexGrow: 1 }}>
+                        <Skeleton
+                          variant="text"
+                          width="60%"
+                          height={24}
+                          animation="wave"
+                          sx={{
+                            bgcolor: alpha(theme.palette.primary.main, 0.1),
+                          }}
+                        />
+                        <Skeleton
+                          variant="text"
+                          width="80%"
+                          height={16}
+                          animation="wave"
+                          sx={{
+                            bgcolor: alpha(theme.palette.primary.main, 0.05),
+                          }}
+                        />
+                        {layout !== 'compact' && (
+                          <>
+                            <Skeleton
+                              variant="text"
+                              width="100%"
+                              height={12}
+                              animation="wave"
+                              sx={{
+                                bgcolor: alpha(
+                                  theme.palette.primary.main,
+                                  0.03
+                                ),
+                                mt: 1,
+                              }}
+                            />
+                            <Skeleton
+                              variant="text"
+                              width="90%"
+                              height={12}
+                              animation="wave"
+                              sx={{
+                                bgcolor: alpha(
+                                  theme.palette.primary.main,
+                                  0.03
+                                ),
+                              }}
+                            />
+                          </>
+                        )}
+                      </Box>
                     )}
                   </MotionBox>
                 </Grid>
@@ -503,7 +666,13 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
             <Grid container spacing={getGridGap()}>
               {sortedAudios.map((audio, index) => (
                 <Grid {...getGridItemSize()} key={audio.id}>
-                  <motion.div variants={fadeIn} style={{ height: '100%' }}>
+                  <motion.div
+                    variants={fadeIn}
+                    style={{ height: '100%' }}
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                  >
                     <AudioCard
                       audio={audio}
                       index={index}
@@ -522,49 +691,90 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
         <MotionBox
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7 }}
           sx={{
             textAlign: 'center',
             py: 8,
-            bgcolor: 'background.paper',
-            borderRadius: 2,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+            px: 3,
+            borderRadius: 4,
+            backdropFilter: 'blur(10px)',
+            background: `linear-gradient(145deg, ${alpha(theme.palette.background.paper, 0.8)} 0%, ${alpha(theme.palette.background.default, 0.6)} 100%)`,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
+            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
             mt: 4,
           }}
         >
-          <Audiotrack sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
-          <Typography variant="h6" color="text.secondary" gutterBottom>
+          <MusicNote
+            sx={{
+              fontSize: 80,
+              color: alpha(theme.palette.primary.main, 0.2),
+              mb: 3,
+            }}
+          />
+          <MotionTypography
+            variant="h5"
+            color="text.primary"
+            gutterBottom
+            fontWeight="medium"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
             No audio files found
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
+          </MotionTypography>
+          <MotionTypography
+            variant="body1"
+            color="text.secondary"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
             {searchTerm
               ? 'Try adjusting your search or filters'
               : mode === 'user'
                 ? 'Create your first audio to get started'
                 : 'No audio files are available yet'}
-          </Typography>
+          </MotionTypography>
           {searchTerm ? (
-            <Button
+            <MotionButton
               variant="outlined"
-              sx={{ mt: 2 }}
+              sx={{
+                mt: 3,
+                borderRadius: 2,
+                px: 3,
+                py: 1,
+                borderColor: alpha(theme.palette.primary.main, 0.5),
+              }}
               onClick={() => setSearchTerm('')}
-              component={motion.button}
-              whileHover={{ scale: 1.05 }}
+              whileHover={{
+                scale: 1.05,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              }}
               whileTap={{ scale: 0.95 }}
             >
               Clear Search
-            </Button>
+            </MotionButton>
           ) : (
             mode === 'user' && (
-              <Button
+              <MotionButton
                 variant="contained"
-                sx={{ mt: 2 }}
+                sx={{
+                  mt: 3,
+                  borderRadius: 2,
+                  px: 3,
+                  py: 1,
+                  backgroundImage: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
+                }}
                 onClick={() => router.push('/flow/generate-audio')}
-                component={motion.button}
-                whileHover={{ scale: 1.05 }}
+                whileHover={{
+                  scale: 1.05,
+                  boxShadow: `0 6px 16px ${alpha(theme.palette.primary.main, 0.4)}`,
+                }}
                 whileTap={{ scale: 0.95 }}
               >
                 Create Audio
-              </Button>
+              </MotionButton>
             )
           )}
         </MotionBox>
@@ -574,10 +784,10 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
         <MotionBox
           display="flex"
           justifyContent="center"
-          mt={4}
+          mt={5}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
         >
           <Pagination
             count={currentTotalPages}
@@ -588,10 +798,15 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
             siblingCount={isMobile ? 0 : 1}
             sx={{
               '& .MuiPaginationItem-root': {
-                transition: 'all 0.2s ease',
+                transition: 'all 0.3s ease',
+                borderRadius: 2,
                 '&:hover': {
-                  backgroundColor: theme.palette.primary.light,
-                  color: theme.palette.primary.contrastText,
+                  backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                  color: theme.palette.primary.main,
+                },
+                '&.Mui-selected': {
+                  backgroundImage: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                  boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.3)}`,
                 },
               },
             }}
@@ -612,22 +827,27 @@ const AudioGallery: React.FC<AudioGalleryProps> = ({ mode = 'all' }) => {
             zIndex: 10,
           }}
         >
-          <IconButton
+          <MotionIconButton
             color="primary"
             sx={{
-              bgcolor: 'background.paper',
-              boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+              bgcolor: alpha(theme.palette.background.paper, 0.9),
+              backdropFilter: 'blur(8px)',
+              boxShadow: `0 4px 15px ${alpha(theme.palette.primary.main, 0.25)}`,
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
               '&:hover': {
-                bgcolor: 'background.paper',
+                backgroundColor: alpha(theme.palette.primary.main, 0.15),
               },
             }}
             onClick={scrollToTop}
-            component={motion.button}
-            whileHover={{ scale: 1.1 }}
+            whileHover={{
+              scale: 1.1,
+              rotate: 0,
+              boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+            }}
             whileTap={{ scale: 0.9 }}
           >
             <ArrowUpward />
-          </IconButton>
+          </MotionIconButton>
         </MotionBox>
       )}
     </MotionBox>

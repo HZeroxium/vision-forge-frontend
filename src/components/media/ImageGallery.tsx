@@ -83,7 +83,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ mode = 'all' }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('newest')
   const [filterOpen, setFilterOpen] = useState(false)
-  const [layout, setLayout] = useState<LayoutType>('cascade')
+  const [layout, setLayout] = useState<LayoutType>('grid')
   const [filterCount, setFilterCount] = useState(0)
   const [scrolled, setScrolled] = useState(false)
   const router = useRouter()
