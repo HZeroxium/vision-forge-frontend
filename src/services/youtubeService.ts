@@ -1,73 +1,127 @@
 // src/services/youtubeService.ts
-import api from './api' // Sử dụng instance axios đã cấu hình sẵn (có Bearer token)
 
-export interface UploadVideoDto {
-  videoId: string
-  title: string
-  description: string
-  tags: string[]
-  privacyStatus?: 'private' | 'public' | 'unlisted'
-}
-
-export interface VideoStatistics {
-  viewCount: number
-  likeCount: number
-  commentCount: number
-}
+import api from './api'
+import {
+  YouTubeAuthResponse,
+  YouTubeCallbackResponse,
+  YouTubeUploadOptions,
+  YouTubeUploadResponse,
+  YouTubeVideoStatistics,
+  BaseAnalyticsResponse,
+  TopVideosAnalyticsResponse,
+  DemographicsAnalyticsResponse,
+} from './types/youtubeTypes'
 
 /**
- * Gọi API lấy URL để thực hiện OAuth2 đăng nhập YouTube.
- * Trả về 1 URL, dùng để redirect người dùng đến trang xác thực Google.
+ * Get the YouTube OAuth authentication URL
  */
-export const getAuthUrl = async (): Promise<{ url: string }> => {
+export const getAuthUrl = async (): Promise<YouTubeAuthResponse> => {
   const response = await api.get('/youtube/auth-url')
   return response.data
 }
 
 /**
- * Xử lý callback từ Google OAuth sau khi người dùng xác thực thành công.
- * Dùng cho trường hợp người dùng chưa đăng nhập hệ thống (Public callback).
- * @param params - Bao gồm code (authorization code), state (user ID đã mã hóa), và optional error
+ * Handle the callback from YouTube OAuth (for authenticated users)
  */
-export const handlePublicCallback = async (params: {
-  code: string
-  state: string
+export const handleCallback = async (
+  code: string,
   error?: string
-}): Promise<any> => {
-  const response = await api.get('/youtube/public-callback', { params })
+): Promise<YouTubeCallbackResponse> => {
+  const response = await api.get('/youtube/callback', {
+    params: { code, error },
+  })
   return response.data
 }
 
 /**
- * Xử lý callback OAuth khi người dùng đã đăng nhập hệ thống.
- * Gửi authorization code để backend lấy access token từ Google.
- * @param params - Bao gồm code và optional error
+ * Handle the callback from YouTube OAuth (for public users)
  */
-export const handleProtectedCallback = async (params: {
-  code: string
+export const handlePublicCallback = async (
+  code: string,
+  state: string,
   error?: string
-}): Promise<any> => {
-  const response = await api.get('/youtube/callback', { params })
+): Promise<YouTubeCallbackResponse> => {
+  const response = await api.get('/youtube/public-callback', {
+    params: { code, state, error },
+  })
   return response.data
 }
 
 /**
- * Upload hoặc cập nhật thông tin một video YouTube.
- * @param data - Thông tin video bao gồm ID, tiêu đề, mô tả, tags, và trạng thái riêng tư
+ * Upload a video to YouTube
  */
-export const uploadVideo = async (data: UploadVideoDto): Promise<any> => {
+export const uploadVideo = async (
+  data: YouTubeUploadOptions
+): Promise<YouTubeUploadResponse> => {
   const response = await api.post('/youtube/upload', data)
   return response.data
 }
 
 /**
- * Lấy thống kê của một video đã được xuất bản.
- * Trả về số lượt xem, lượt thích và lượt bình luận.
- * @param publishingHistoryId - ID của bản ghi lịch sử đăng video
+ * Get video statistics from YouTube
  */
 export const getVideoStatistics = async (
   publishingHistoryId: string
-): Promise<VideoStatistics> => {
+): Promise<YouTubeVideoStatistics> => {
   const response = await api.get(`/youtube/statistics/${publishingHistoryId}`)
+  return response.data
+}
+
+/**
+ * Get video analytics from YouTube
+ */
+export const getVideoAnalytics = async (
+  videoId: string,
+  metrics?: string,
+  startDate?: string,
+  endDate?: string,
+  dimensions?: string
+): Promise<BaseAnalyticsResponse> => {
+  const response = await api.get(`/youtube/analytics/video/${videoId}`, {
+    params: { metrics, startDate, endDate, dimensions },
+  })
+  return response.data
+}
+
+/**
+ * Get channel analytics from YouTube
+ */
+export const getChannelAnalytics = async (
+  metrics?: string,
+  startDate?: string,
+  endDate?: string,
+  dimensions?: string
+): Promise<BaseAnalyticsResponse> => {
+  const response = await api.get('/youtube/analytics/channel', {
+    params: { metrics, startDate, endDate, dimensions },
+  })
+  return response.data
+}
+
+/**
+ * Get top videos analytics from YouTube
+ */
+export const getTopVideosAnalytics = async (
+  limit?: number,
+  metrics?: string,
+  startDate?: string,
+  endDate?: string
+): Promise<TopVideosAnalyticsResponse> => {
+  const response = await api.get('/youtube/analytics/top-videos', {
+    params: { limit, metrics, startDate, endDate },
+  })
+  return response.data
+}
+
+/**
+ * Get demographics analytics from YouTube
+ */
+export const getDemographicsAnalytics = async (
+  startDate?: string,
+  endDate?: string
+): Promise<DemographicsAnalyticsResponse> => {
+  const response = await api.get('/youtube/analytics/demographics', {
+    params: { startDate, endDate },
+  })
   return response.data
 }

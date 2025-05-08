@@ -1,12 +1,19 @@
 'use client'
 import React from 'react'
 import { usePathname } from 'next/navigation'
-import { Box, Typography, IconButton, Collapse, List } from '@mui/material'
+import {
+  Box,
+  Typography,
+  IconButton,
+  Collapse,
+  List,
+  alpha,
+  useTheme,
+} from '@mui/material'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useTheme } from '@mui/material/styles'
 
 // Define route item type
 export interface RouteItem {
@@ -55,11 +62,23 @@ const RouteGroup: React.FC<RouteGroupProps> = ({
       },
     },
     hover: {
-      scale: 1.05,
+      x: 5,
       transition: { duration: 0.2 },
     },
     tap: {
-      scale: 0.95,
+      scale: 0.98,
+    },
+  }
+
+  // Container animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.1,
+      },
     },
   }
 
@@ -72,9 +91,14 @@ const RouteGroup: React.FC<RouteGroupProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            px: 3,
+            px: 2.5,
             py: 1,
             cursor: 'pointer',
+            borderRadius: 1,
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              backgroundColor: alpha(theme.palette.action.hover, 0.7),
+            },
           }}
           onClick={onToggle}
         >
@@ -86,16 +110,20 @@ const RouteGroup: React.FC<RouteGroupProps> = ({
               fontSize: '0.75rem',
               fontWeight: 'bold',
               letterSpacing: 1,
+              textTransform: 'uppercase',
+              color: alpha(theme.palette.text.primary, 0.7),
             }}
           >
             {title}
           </Typography>
-          <IconButton size="small">
-            {expanded ? (
-              <KeyboardArrowUpIcon fontSize="small" />
-            ) : (
-              <KeyboardArrowDownIcon fontSize="small" />
-            )}
+          <IconButton
+            size="small"
+            sx={{
+              transition: 'transform 0.2s ease',
+              transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+            }}
+          >
+            <KeyboardArrowDownIcon fontSize="small" />
           </IconButton>
         </Box>
       )}
@@ -106,7 +134,16 @@ const RouteGroup: React.FC<RouteGroupProps> = ({
         timeout="auto"
         unmountOnExit={false}
       >
-        <List disablePadding>
+        <motion.ul
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          style={{
+            listStyleType: 'none',
+            padding: 0,
+            margin: 0,
+          }}
+        >
           {items.map((item) => {
             // Skip protected routes if user is not logged in
             if (item.protected && !user) {
@@ -125,28 +162,58 @@ const RouteGroup: React.FC<RouteGroupProps> = ({
                   style={{
                     display: 'block',
                     padding: 0,
-                    backgroundColor: isActive
-                      ? theme.palette.action.selected
-                      : 'transparent',
-                    borderLeft: isActive
-                      ? `4px solid ${theme.palette.primary.main}`
-                      : '4px solid transparent',
+                    margin: '2px 0',
+                    backgroundColor: 'transparent',
+                    borderRadius: 8,
+                    position: 'relative',
+                    overflow: 'hidden',
                     listStyle: 'none',
                   }}
                   variants={itemVariants}
-                  initial="hidden"
-                  animate="visible"
                   whileHover="hover"
                   whileTap="tap"
                 >
+                  {/* Active indicator */}
+                  {isActive && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        left: 0,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        width: '4px',
+                        height: '60%',
+                        borderRadius: '0 4px 4px 0',
+                        backgroundColor: theme.palette.primary.main,
+                        boxShadow: `0 0 10px ${alpha(theme.palette.primary.main, 0.5)}`,
+                      }}
+                    />
+                  )}
+
                   <Box
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
-                      minHeight: 48,
+                      minHeight: 42,
                       px: 2.5,
-                      py: 1,
+                      py: 0.7,
+                      borderRadius: 2,
+                      backgroundColor: isActive
+                        ? alpha(
+                            theme.palette.primary.main,
+                            theme.palette.mode === 'dark' ? 0.15 : 0.08
+                          )
+                        : 'transparent',
                       color: isActive ? 'primary.main' : 'text.primary',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        backgroundColor: isActive
+                          ? alpha(
+                              theme.palette.primary.main,
+                              theme.palette.mode === 'dark' ? 0.2 : 0.12
+                            )
+                          : alpha(theme.palette.action.hover, 0.8),
+                      },
                     }}
                   >
                     <Box
@@ -155,11 +222,22 @@ const RouteGroup: React.FC<RouteGroupProps> = ({
                         mr: open ? 2 : 'auto',
                         display: 'flex',
                         justifyContent: 'center',
-                        color: isActive ? 'primary.main' : 'text.primary',
+                        color: isActive
+                          ? theme.palette.primary.main
+                          : alpha(theme.palette.text.primary, 0.7),
                       }}
                     >
-                      {item.icon}
+                      {React.cloneElement(item.icon as React.ReactElement, {
+                        fontSize: 'small',
+                        sx: {
+                          fontSize: '1.25rem',
+                          filter: isActive
+                            ? `drop-shadow(0 0 6px ${alpha(theme.palette.primary.main, 0.4)})`
+                            : 'none',
+                        },
+                      })}
                     </Box>
+
                     <AnimatePresence>
                       {open && (
                         <motion.div
@@ -171,7 +249,11 @@ const RouteGroup: React.FC<RouteGroupProps> = ({
                           <Typography
                             sx={{
                               fontSize: '0.9rem',
-                              fontWeight: isActive ? 'bold' : 'normal',
+                              fontWeight: isActive ? 600 : 400,
+                              whiteSpace: 'nowrap',
+                              color: isActive
+                                ? theme.palette.primary.main
+                                : theme.palette.text.primary,
                             }}
                           >
                             {item.text}
@@ -184,7 +266,7 @@ const RouteGroup: React.FC<RouteGroupProps> = ({
               </Link>
             )
           })}
-        </List>
+        </motion.ul>
       </Collapse>
     </Box>
   )

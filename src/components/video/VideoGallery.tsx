@@ -35,12 +35,15 @@ import {
   ArrowUpward,
   Movie,
   VideoLibrary,
+  PersonOutline,
+  Public,
 } from '@mui/icons-material'
 import { motion, AnimatePresence } from 'framer-motion'
 import Grid from '@mui/material/Grid2'
 import { useVideos } from '@hooks/useVideos'
 import VideoCard from './VideoCard'
 import { staggerContainer, fadeIn } from '@/utils/animations'
+import { Video } from '@/services/videoService'
 
 const MotionBox = motion(Box)
 const MotionPaper = motion(Paper)
@@ -49,9 +52,41 @@ const MotionButton = motion(Button)
 // Define the gallery layout types
 type LayoutType = 'grid' | 'list'
 
-const VideoGallery: React.FC = () => {
-  const { videos, loading, error, page, totalPages, loadVideos, clearError } =
-    useVideos()
+// Define props for VideoGallery component
+interface VideoGalleryProps {
+  mode?: 'all' | 'user'
+}
+
+const VideoGallery: React.FC<VideoGalleryProps> = ({ mode = 'all' }) => {
+  // Get the appropriate state and actions based on mode
+  const {
+    // Common states for both modes
+    currentVideo,
+    currentVideoLoading,
+    currentVideoError,
+
+    // For 'all' mode
+    videos,
+    loading,
+    error,
+    page,
+    totalPages,
+
+    // For 'user' mode
+    userVideos,
+    userLoading,
+    userError,
+    userPage,
+    userTotalPages,
+
+    // Actions
+    loadVideos,
+    loadUserVideos,
+    deleteVideo,
+    clearError,
+    clearUserError,
+  } = useVideos()
+
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('newest')
   const [filterOpen, setFilterOpen] = useState(false)
@@ -64,13 +99,24 @@ const VideoGallery: React.FC = () => {
 
   const skeletonArray = Array.from({ length: 6 }, (_, i) => i)
 
+  // Determine which data, loading state, and error to use based on mode
+  const currentVideos = mode === 'all' ? videos : userVideos
+  const currentLoading = mode === 'all' ? loading : userLoading
+  const currentError = mode === 'all' ? error : userError
+  const currentPage = mode === 'all' ? page : userPage
+  const currentTotalPages = mode === 'all' ? totalPages : userTotalPages
+
+  // Choose the appropriate load function based on mode
+  const loadCurrentVideos = mode === 'all' ? loadVideos : loadUserVideos
+  const clearCurrentError = mode === 'all' ? clearError : clearUserError
+
   // Load videos when the component mounts or when page changes
   useEffect(() => {
-    // Only fetch videos if there is no error to prevent auto-retry spam
-    if (!error) {
-      loadVideos(page, 12)
+    // Only fetch if there is no error to prevent auto-retry spam
+    if (!currentError) {
+      loadCurrentVideos(currentPage, 12)
     }
-  }, [loadVideos, page, error])
+  }, [loadCurrentVideos, currentPage, currentError])
 
   // Calculate filter count when filters change
   useEffect(() => {
@@ -99,7 +145,7 @@ const VideoGallery: React.FC = () => {
     value: number
   ) => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
-    setTimeout(() => loadVideos(value, 12), 300)
+    setTimeout(() => loadCurrentVideos(value, 12), 300)
   }
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,14 +173,21 @@ const VideoGallery: React.FC = () => {
     setLayout(newLayout)
   }
 
-  // Handle delete button (to be implemented)
-  const handleDelete = (id: string) => {
-    // Implement deletion logic, e.g., dispatch a deleteVideoAsync action
-    console.log('Delete video with ID:', id)
+  // Handle delete button (only available in user mode)
+  const handleDelete = async (id: string) => {
+    if (mode !== 'user') return
+
+    if (confirm('Are you sure you want to delete this video?')) {
+      try {
+        await deleteVideo(id)
+      } catch (error) {
+        console.error('Failed to delete video:', error)
+      }
+    }
   }
 
   // Filter videos based on search term
-  const filteredVideos = videos.filter(
+  const filteredVideos = currentVideos.filter(
     (video) =>
       video.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       video.status.toLowerCase().includes(searchTerm.toLowerCase())
@@ -303,7 +356,7 @@ const VideoGallery: React.FC = () => {
     </MotionPaper>
   )
 
-  if (error) {
+  if (currentError) {
     return (
       <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
         <Alert
@@ -315,17 +368,16 @@ const VideoGallery: React.FC = () => {
             borderRadius: 2,
           }}
         >
-          Oops! Failed to load videos. {error}
+          Oops! Failed to load videos. {currentError}
         </Alert>
         <MotionButton
           variant="contained"
           color="secondary"
           onClick={() => {
-            clearError()
-            loadVideos(page, 12)
+            clearCurrentError()
+            loadCurrentVideos(currentPage, 12)
           }}
           sx={{ mt: 2 }}
-          component={motion.button}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -360,7 +412,12 @@ const VideoGallery: React.FC = () => {
           sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
         >
           <VideoLibrary color="secondary" />
-          {loading ? (
+          {mode === 'user' ? (
+            <PersonOutline fontSize="small" />
+          ) : (
+            <Public fontSize="small" />
+          )}
+          {currentLoading ? (
             <Box
               component="span"
               sx={{ display: 'flex', alignItems: 'center' }}
@@ -392,7 +449,7 @@ const VideoGallery: React.FC = () => {
       {(!isMobile || filterOpen) && renderFilterBar()}
 
       <AnimatePresence mode="wait">
-        {loading ? (
+        {currentLoading ? (
           <MotionBox
             key="loading"
             variants={staggerContainer}
@@ -405,7 +462,6 @@ const VideoGallery: React.FC = () => {
                 <Grid {...getGridItemSize()} key={item}>
                   <MotionBox
                     variants={fadeIn}
-                    component={Paper}
                     sx={{
                       borderRadius: 3,
                       overflow: 'hidden',
@@ -453,7 +509,7 @@ const VideoGallery: React.FC = () => {
                   <motion.div variants={fadeIn} style={{ height: '100%' }}>
                     <VideoCard
                       video={video}
-                      onDelete={handleDelete}
+                      onDelete={mode === 'user' ? handleDelete : undefined}
                       layout={layout}
                       index={index}
                     />
@@ -465,7 +521,7 @@ const VideoGallery: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {sortedVideos.length === 0 && !loading && (
+      {sortedVideos.length === 0 && !currentLoading && (
         <MotionBox
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -483,7 +539,11 @@ const VideoGallery: React.FC = () => {
             No videos found
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Try adjusting your search or filters
+            {searchTerm
+              ? 'Try adjusting your search or filters'
+              : mode === 'user'
+                ? 'Create your first video to get started'
+                : 'No videos are available yet'}
           </Typography>
           {searchTerm && (
             <Button
@@ -501,7 +561,7 @@ const VideoGallery: React.FC = () => {
         </MotionBox>
       )}
 
-      {totalPages > 1 && !loading && sortedVideos.length > 0 && (
+      {currentTotalPages > 1 && !currentLoading && sortedVideos.length > 0 && (
         <MotionBox
           display="flex"
           justifyContent="center"
@@ -511,14 +571,12 @@ const VideoGallery: React.FC = () => {
           transition={{ delay: 0.5 }}
         >
           <Pagination
-            count={totalPages}
-            page={page}
+            count={currentTotalPages}
+            page={currentPage}
             onChange={handlePageChange}
             color="secondary"
             size={isMobile ? 'small' : 'medium'}
             siblingCount={isMobile ? 0 : 1}
-            component={motion.div}
-            whileHover={{ scale: 1.05 }}
             sx={{
               '& .MuiPaginationItem-root': {
                 transition: 'all 0.2s ease',
@@ -535,7 +593,7 @@ const VideoGallery: React.FC = () => {
       {scrolled && (
         <MotionBox
           initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={{ opacity: 1 }}
           exit={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.3 }}
           sx={{

@@ -12,6 +12,7 @@ export interface AudioConfig {
 export interface ImagesScripts {
   image_urls: string[]
   scripts: string[]
+  prompts: string[]
 }
 
 export interface AudioPreview {
@@ -74,12 +75,14 @@ export const startVideoGenerationJob = async (data: {
   scriptId: string
   imageUrls: string[]
   scripts: string[]
+  voice?: string
 }): Promise<VideoJobResponse> => {
   try {
     console.log('Starting video generation job with data:', {
       scriptId: data.scriptId,
       imagesCount: data.imageUrls.length,
       scriptsCount: data.scripts.length,
+      voice: data.voice,
     })
 
     const response = await api.post('/flow/generate-video-job', data)

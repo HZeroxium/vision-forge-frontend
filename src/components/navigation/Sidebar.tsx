@@ -1,9 +1,11 @@
+// /src/components/navigation/Sidebar.tsx
+
 'use client'
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useTheme } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
-import { Box, Drawer, useScrollTrigger } from '@mui/material'
+import { Box, Drawer, useScrollTrigger, alpha } from '@mui/material'
 import { useAppSelector } from '@store/store'
 
 // Icons
@@ -16,6 +18,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import SettingsIcon from '@mui/icons-material/Settings'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
+import { Analytics } from '@mui/icons-material'
 
 // Custom components
 import SidebarContent, { RouteGroup } from './SidebarContent'
@@ -35,6 +38,12 @@ const routes: RouteGroup[] = [
         icon: <DashboardIcon />,
         protected: true,
       },
+      {
+        path: '/media/videos/uploadYoutube',
+        text: 'Youtube Analytics',
+        icon: <Analytics />,
+        protected: true,
+      },
     ],
   },
   {
@@ -47,7 +56,7 @@ const routes: RouteGroup[] = [
         protected: true,
       },
       {
-        path: '/flow/advanced',
+        path: '/dev/tools',
         text: 'Advanced Tools',
         icon: <AutoAwesomeIcon />,
         protected: true,
@@ -164,7 +173,6 @@ const Sidebar = () => {
       {/* Desktop drawer - permanent but can be collapsed */}
       {!isMobile && (
         <MotionBox
-          component="aside"
           initial={false}
           animate={open ? 'open' : 'closed'}
           variants={drawerVariants}
@@ -179,6 +187,10 @@ const Sidebar = () => {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.enteringScreen,
             }),
+            borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            boxShadow: '0 0 20px rgba(0,0,0,0.05)',
+            position: 'relative',
+            zIndex: theme.zIndex.drawer,
           }}
         >
           <SidebarContent
@@ -208,6 +220,13 @@ const Sidebar = () => {
             '& .MuiDrawer-paper': {
               width: 240,
               boxSizing: 'border-box',
+              borderRadius: '0 16px 16px 0',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+              background:
+                theme.palette.mode === 'dark'
+                  ? `linear-gradient(145deg, ${alpha(theme.palette.background.paper, 0.9)}, ${alpha(theme.palette.background.default, 0.95)})`
+                  : `linear-gradient(145deg, rgba(255,255,255,0.98), rgba(255,255,255,0.9))`,
+              backdropFilter: 'blur(10px)',
             },
           }}
         >

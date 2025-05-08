@@ -42,10 +42,12 @@ import {
   Audiotrack,
   Schedule,
   Info,
+  Delete,
 } from '@mui/icons-material'
-import { fetchAudio } from '@services/audiosService'
+import { fetchAudio, deleteAudio } from '@services/audiosService'
 import type { Audio } from '@services/audiosService'
 import { slideInFromRight, fadeIn } from '@/utils/animations'
+import { useAuth } from '@/hooks/useAuth'
 
 const MotionBox = motion(Box)
 const MotionPaper = motion(Paper)
@@ -59,6 +61,7 @@ export default function AudioDetailPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const isTablet = useMediaQuery(theme.breakpoints.down('md'))
+  const { user } = useAuth()
 
   const [audio, setAudio] = useState<Audio | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
@@ -74,6 +77,9 @@ export default function AudioDetailPage() {
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
   const [barData, setBarData] = useState<number[]>([])
+
+  // Check if current user owns this audio
+  const isOwner = user && audio && user.id === audio.userId
 
   // Animation frequency bar data
   const generateBarData = () => {
@@ -360,7 +366,6 @@ export default function AudioDetailPage() {
 
           <MotionTypography
             variant="h5"
-            component="h1"
             sx={{
               flexGrow: 1,
               display: { xs: 'none', sm: 'block' },
@@ -374,7 +379,7 @@ export default function AudioDetailPage() {
         {audio && (
           <Grid container spacing={3}>
             {/* Main Player Section */}
-            <Grid xs={12} md={8}>
+            <Grid size={{ xs: 12, md: 8 }}>
               <MotionPaper
                 variants={fadeIn}
                 elevation={2}
@@ -654,7 +659,7 @@ export default function AudioDetailPage() {
               </MotionPaper>
             </Grid>
 
-            <Grid xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <MotionPaper
                 variants={fadeIn}
                 elevation={2}
@@ -777,6 +782,29 @@ export default function AudioDetailPage() {
                   >
                     <Share />
                   </MotionIconButton>
+
+                  {isOwner && (
+                    <MotionIconButton
+                      color="error"
+                      onClick={async () => {
+                        if (
+                          confirm('Are you sure you want to delete this audio?')
+                        ) {
+                          try {
+                            await deleteAudio(audio.id)
+                            router.push('/media/audios')
+                          } catch (error) {
+                            console.error('Failed to delete audio:', error)
+                          }
+                        }
+                      }}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      sx={{ bgcolor: 'action.hover' }}
+                    >
+                      <Delete />
+                    </MotionIconButton>
+                  )}
                 </Box>
               </MotionPaper>
             </Grid>

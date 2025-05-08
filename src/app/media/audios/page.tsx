@@ -14,6 +14,7 @@ import {
 import { motion } from 'framer-motion'
 import AudioGallery from '@components/media/AudioGallery'
 import { fadeIn } from '@/utils/animations'
+import { useRouter } from 'next/navigation'
 import {
   Audiotrack,
   GraphicEq,
@@ -29,6 +30,7 @@ const MotionDivider = motion(Divider)
 
 export default function AudiosPage() {
   const theme = useTheme()
+  const router = useRouter()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const isTablet = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -103,6 +105,10 @@ export default function AudiosPage() {
     ],
   }
 
+  const handleNavigateToGenerate = () => {
+    router.push('/flow/generate-audio')
+  }
+
   return (
     <Container maxWidth="xl" sx={{ pt: 4, pb: 6 }}>
       <MotionBox
@@ -117,204 +123,87 @@ export default function AudiosPage() {
           },
         }}
       >
-        {/* Header Section */}
         <MotionPaper
           variants={fadeIn}
           elevation={0}
           sx={{
             mb: 4,
-            pt: { xs: 6, md: 7 },
-            pb: { xs: 6, md: 7 },
-            px: { xs: 3, md: 5 },
+            p: { xs: 3, md: 4 },
             borderRadius: 3,
-            background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 40%, ${theme.palette.primary.light} 100%)`,
-            color: 'white',
-            overflow: 'hidden',
-            position: 'relative',
+            background: 'linear-gradient(135deg, #f5f7fa 0%, #e9f0f6 100%)',
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            justifyContent: 'space-between',
+            alignItems: { xs: 'center', md: 'flex-start' },
           }}
         >
-          {/* Animated dots background */}
-          <Box
-            component={motion.div}
-            animate={{
-              opacity: [0.1, 0.15, 0.1],
-            }}
-            transition={{
-              duration: 5,
-              repeat: Infinity,
-              repeatType: 'reverse',
-            }}
-            sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundImage:
-                'radial-gradient(rgba(255,255,255,0.2) 1px, transparent 1px)',
-              backgroundSize: '25px 25px',
-              zIndex: 0,
-            }}
-          />
-
-          <Grid container alignItems="center" spacing={3}>
-            <Grid xs={12} md={7} sx={{ position: 'relative', zIndex: 1 }}>
-              <MotionBox
-                sx={{ display: 'flex', alignItems: 'center', mb: 2 }}
-                initial={{ x: -30, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ duration: 0.6 }}
-              >
-                <Headphones sx={{ mr: 1, fontSize: 30 }} />
-                <MotionTypography
-                  variant="h4"
-                  component="h1"
-                  fontWeight="bold"
-                  sx={{ textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
-                >
-                  Audio Library
-                </MotionTypography>
-              </MotionBox>
-
-              <MotionTypography
-                variant="h6"
-                sx={{
-                  mb: 3,
-                  opacity: 0.9,
-                  textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                  maxWidth: 600,
-                }}
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 0.9 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-              >
-                Browse and manage your AI-generated audio collection for use in
-                your projects
-              </MotionTypography>
-
-              <MotionBox
-                display="flex"
-                gap={2}
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-              >
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  sx={{
-                    color: 'white',
-                    px: 3,
-                    borderRadius: 2,
-                    textTransform: 'none',
-                    fontWeight: 'bold',
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-                    '&:hover': {
-                      boxShadow: '0 6px 12px rgba(0,0,0,0.3)',
-                    },
-                  }}
-                  component={motion.button}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Generate New Audio
-                </Button>
-                <Button
-                  variant="outlined"
-                  sx={{
-                    color: 'white',
-                    borderColor: 'rgba(255,255,255,0.5)',
-                    px: 3,
-                    borderRadius: 2,
-                    textTransform: 'none',
-                    '&:hover': {
-                      borderColor: 'white',
-                      backgroundColor: 'rgba(255,255,255,0.1)',
-                    },
-                  }}
-                  component={motion.button}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Upload Audio
-                </Button>
-              </MotionBox>
-            </Grid>
-
-            <Grid
-              xs={12}
-              md={5}
-              sx={{
-                display: { xs: 'none', md: 'flex' },
-                justifyContent: 'center',
-                alignItems: 'center',
-                position: 'relative',
-                zIndex: 1,
+          <Box sx={{ maxWidth: { xs: '100%', md: '70%' } }}>
+            <MotionTypography
+              variant="h4"
+              gutterBottom
+              fontWeight="bold"
+              color="primary"
+              textAlign={{ xs: 'center', md: 'left' }}
+              sx={{ mb: 2 }}
+              variants={{
+                hidden: { opacity: 0, y: -20 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { duration: 0.6 },
+                },
               }}
             >
-              <MotionBox
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.7, delay: 0.3 }}
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  width: 220,
-                  height: 220,
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(255,255,255,0.1)',
-                  position: 'relative',
-                  boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
-                  backdropFilter: 'blur(8px)',
-                }}
-              >
-                {/* Animated equalizer bars */}
-                <MotionBox
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    justifyContent: 'center',
-                    gap: 1,
-                    height: 50,
-                  }}
-                >
-                  {audioEqualizerAnimation.bars.map((bar, i) => (
-                    <MotionBox
-                      key={i}
-                      initial={bar.initial}
-                      animate={bar.animate}
-                      sx={{
-                        width: 6,
-                        backgroundColor: 'white',
-                        borderRadius: 4,
-                      }}
-                    />
-                  ))}
-                </MotionBox>
+              My Audio Library
+            </MotionTypography>
 
-                <MotionBox
-                  sx={{
-                    position: 'absolute',
-                    width: '100%',
-                    height: '100%',
-                    borderRadius: '50%',
-                  }}
-                  animate={{
-                    boxShadow: [
-                      '0 0 0 0 rgba(255,255,255,0.4)',
-                      '0 0 0 20px rgba(255,255,255,0.0)',
-                    ],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: 'easeOut',
-                  }}
-                />
-              </MotionBox>
-            </Grid>
-          </Grid>
+            <MotionTypography
+              variant="h6"
+              color="text.secondary"
+              textAlign={{ xs: 'center', md: 'left' }}
+              sx={{
+                maxWidth: 800,
+                mb: { xs: 3, md: 0 },
+                fontSize: { xs: '1rem', md: '1.25rem' },
+              }}
+              variants={{
+                hidden: { opacity: 0, y: -20 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { duration: 0.6, delay: 0.1 },
+                },
+              }}
+            >
+              Browse through your AI-generated audio files created with Vision
+              Forge
+            </MotionTypography>
+          </Box>
+
+          <MotionBox
+            display="flex"
+            gap={2}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleNavigateToGenerate}
+              sx={{
+                py: 1.5,
+                px: 3,
+                borderRadius: 2,
+                minWidth: 180,
+              }}
+              component={motion.button}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Generate New Audio
+            </Button>
+          </MotionBox>
         </MotionPaper>
 
         {/* Features Highlight */}
@@ -343,7 +232,7 @@ export default function AudiosPage() {
                 desc: 'Professional-grade audio for all your projects',
               },
             ].map((feature, i) => (
-              <Grid xs={12} md={4} key={i}>
+              <Grid size={{ xs: 12, md: 4 }} key={i}>
                 <MotionPaper
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -388,7 +277,7 @@ export default function AudiosPage() {
           </Grid>
         </MotionBox>
 
-        {/* Gallery Section */}
+        {/* Gallery Section - Using 'user' mode to show only the current user's audios */}
         <MotionPaper
           variants={fadeIn}
           elevation={2}
@@ -398,7 +287,7 @@ export default function AudiosPage() {
             backgroundColor: 'background.paper',
           }}
         >
-          <AudioGallery />
+          <AudioGallery mode="user" />
         </MotionPaper>
       </MotionBox>
     </Container>

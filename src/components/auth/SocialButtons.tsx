@@ -2,13 +2,13 @@
 import React from 'react'
 import { Button, Box, Typography, Divider } from '@mui/material'
 import { Google, GitHub } from '@mui/icons-material'
-import { signIn } from 'next-auth/react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
+import env from '@/config/env' // Make sure this exists with API_URL
 
 // Create motion components
-const MotionButton = motion(Button)
-const MotionBox = motion(Box)
+const MotionButton = motion.create(Button)
+const MotionBox = motion.create(Box)
 
 interface SocialButtonsProps {
   direction?: 'row' | 'column'
@@ -18,6 +18,11 @@ const SocialButtons: React.FC<SocialButtonsProps> = ({
   direction = 'column',
 }) => {
   const { t } = useTranslation('auth')
+
+  const handleGoogleLogin = () => {
+    // Redirect to backend Google auth endpoint
+    window.location.href = `${env.API_URL}/auth/google`
+  }
 
   return (
     <MotionBox sx={{ width: '100%' }}>
@@ -43,7 +48,7 @@ const SocialButtons: React.FC<SocialButtonsProps> = ({
           variant="outlined"
           color="secondary"
           fullWidth
-          onClick={() => signIn('google')}
+          onClick={handleGoogleLogin}
           startIcon={<Google />}
           whileHover={{ scale: 1.02, boxShadow: 2 }}
           whileTap={{ scale: 0.98 }}
@@ -61,7 +66,11 @@ const SocialButtons: React.FC<SocialButtonsProps> = ({
           variant="outlined"
           color="info"
           fullWidth
-          onClick={() => signIn('github')}
+          onClick={() => {
+            // For now, we're keeping GitHub login separate
+            // You could implement a similar flow for GitHub
+            console.log('GitHub login not yet implemented')
+          }}
           startIcon={<GitHub />}
           whileHover={{ scale: 1.02, boxShadow: 2 }}
           whileTap={{ scale: 0.98 }}

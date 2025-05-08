@@ -1,4 +1,5 @@
 // src/store/store.ts
+
 import { configureStore } from '@reduxjs/toolkit'
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux'
 import authReducer from './authSlice'
@@ -7,6 +8,11 @@ import settingsReducer from './settingsSlice'
 import imagesReducer from './imagesSlice'
 import audiosReducer from './audiosSlice'
 import scriptsReducer from './scriptsSlice'
+import publisherReducer from './publisherSlice'
+import youtubeReducer from './youtubeSlice'
+import storageReducer from './storageSlice'
+import pineconeReducer from './pineconeSlice'
+import usersReducer from './userSlice' // Add this import
 
 const store = configureStore({
   reducer: {
@@ -16,6 +22,11 @@ const store = configureStore({
     video: videoReducer,
     settings: settingsReducer,
     scripts: scriptsReducer,
+    publisher: publisherReducer,
+    youtube: youtubeReducer,
+    storage: storageReducer,
+    pinecone: pineconeReducer,
+    users: usersReducer, // Add users reducer
   },
   // Optional: middleware, devTools, etc.
 })

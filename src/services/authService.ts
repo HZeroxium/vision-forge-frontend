@@ -9,8 +9,10 @@ export interface User {
   id: string
   email: string
   name?: string
+  description?: string // Added description field
   role: string
   createdAt: string
+  updatedAt?: string
 }
 
 export const login = async (credentials: {
@@ -25,6 +27,7 @@ export const register = async (data: {
   email: string
   password: string
   name?: string
+  description?: string // Added description field
 }): Promise<User> => {
   const response = await api.post('/auth/register', data)
   return response.data
@@ -64,6 +67,7 @@ export const getProfile = async (): Promise<User> => {
   return response.data
 }
 
+// Get the current user from localStorage if available
 export function getCurrentUser(): User | null {
   const userJson = localStorage.getItem('user')
   if (userJson) {

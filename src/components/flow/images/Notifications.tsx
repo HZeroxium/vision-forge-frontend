@@ -1,9 +1,7 @@
 // src/components/flow/Notifications.tsx
 'use client'
 import React from 'react'
-import { Snackbar, Alert } from '@mui/material'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
+import { Alert, Snackbar } from '@mui/material'
 
 interface NotificationsProps {
   showSaveNotification: boolean
@@ -24,6 +22,7 @@ const Notifications: React.FC<NotificationsProps> = ({
 }) => {
   return (
     <>
+      {/* Save notification */}
       <Snackbar
         open={showSaveNotification}
         autoHideDuration={3000}
@@ -31,41 +30,39 @@ const Notifications: React.FC<NotificationsProps> = ({
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert
+          onClose={onCloseSaveNotification}
           severity="success"
           variant="filled"
-          icon={<CheckCircleIcon />}
-          onClose={onCloseSaveNotification}
-          sx={{ width: '100%' }}
         >
-          Your script changes have been saved successfully!
+          Changes saved successfully
         </Alert>
       </Snackbar>
 
+      {/* Incomplete alert */}
       <Snackbar
         open={showIncompleteAlert}
-        autoHideDuration={4000}
+        autoHideDuration={3000}
         onClose={onCloseIncompleteAlert}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert severity="info" onClose={onCloseIncompleteAlert}>
-          Please wait for image generation to complete before proceeding.
+        <Alert
+          onClose={onCloseIncompleteAlert}
+          severity="warning"
+          variant="filled"
+        >
+          Please wait for image generation to complete before proceeding
         </Alert>
       </Snackbar>
 
+      {/* Save error */}
       <Snackbar
         open={!!saveError}
         autoHideDuration={5000}
         onClose={onCloseSaveError}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert
-          severity="error"
-          variant="filled"
-          icon={<ErrorOutlineIcon />}
-          onClose={onCloseSaveError}
-          sx={{ width: '100%' }}
-        >
-          {saveError || 'Failed to save changes'}
+        <Alert onClose={onCloseSaveError} severity="error" variant="filled">
+          {saveError}
         </Alert>
       </Snackbar>
     </>

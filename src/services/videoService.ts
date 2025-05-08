@@ -13,6 +13,9 @@ export interface Video {
   thumbnailUrl?: string
   createdAt: string
   updatedAt: string
+  title?: string
+  description?: string
+  publishingHistoryId?: string // ID for YouTube publishing history
 }
 
 /**
@@ -45,12 +48,28 @@ export const createVideo = async (data: {
  * Fetches a paginated list of videos.
  * @param page - Current page number.
  * @param limit - Number of videos per page.
+ * @param userId - Optional user ID filter.
  */
 export const fetchVideos = async (
   page = 1,
+  limit = 10,
+  userId?: string
+): Promise<VideosPaginationDto> => {
+  const params = { page, limit, ...(userId && { userId }) }
+  const response = await api.get('/videos', { params })
+  return response.data
+}
+
+/**
+ * Fetches the current user's videos (authenticated endpoint).
+ * @param page - Current page number.
+ * @param limit - Number of videos per page.
+ */
+export const fetchUserVideos = async (
+  page = 1,
   limit = 10
 ): Promise<VideosPaginationDto> => {
-  const response = await api.get('/videos', { params: { page, limit } })
+  const response = await api.get('/videos/user/me', { params: { page, limit } })
   return response.data
 }
 

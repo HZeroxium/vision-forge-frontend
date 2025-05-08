@@ -1,3 +1,5 @@
+// /src/app/media/videos/[id]/page.tsx
+
 'use client'
 
 import React, { useEffect, useState, useRef } from 'react'
@@ -43,11 +45,12 @@ import {
   Schedule,
   HighQuality,
   Settings,
-  YouTube, // Thêm icon YouTube
+  YouTube,
 } from '@mui/icons-material'
 import { fetchVideo } from '@services/videoService'
 import type { Video } from '@services/videoService'
 import { slideInFromRight, fadeIn } from '@/utils/animations'
+import { useYouTube } from '@hooks/useYouTube'
 
 const MotionBox = motion(Box)
 const MotionPaper = motion(Paper)
@@ -56,7 +59,7 @@ const MotionButton = motion(Button)
 const MotionIconButton = motion(IconButton)
 
 export default function VideoDetailPage() {
-  const { id } = useParams() // Get video ID from the URL
+  const { id } = useParams()
   const router = useRouter()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
@@ -68,7 +71,6 @@ export default function VideoDetailPage() {
   const [isBookmarked, setIsBookmarked] = useState<boolean>(false)
   const [copied, setCopied] = useState<boolean>(false)
 
-  // Video player states
   const videoRef = useRef<HTMLVideoElement>(null)
   const playerContainerRef = useRef<HTMLDivElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -83,10 +85,22 @@ export default function VideoDetailPage() {
   const [videoLoaded, setVideoLoaded] = useState(false)
   const [videoError, setVideoError] = useState<string | null>(null)
 
-  // Upload to YouTube states
   const [uploading, setUploading] = useState<boolean>(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [youtubeUrl, setYoutubeUrl] = useState<string | null>(null)
+
+  const { getVideoStatistics } = useYouTube()
+  const [youtubeStats, setYoutubeStats] = useState<any>(null)
+  const [youtubeLoading, setYoutubeLoading] = useState(false)
+
+  const handleRedirectToUpload = () => {
+    if (!id) return
+    router.push(`/media/videos/uploadYoutube/${id}`)
+  }
+
+  const isPublishedToYoutube = () => {
+    return !!youtubeStats && !!youtubeStats.youtubeUrl
+  }
 
   useEffect(() => {
     if (!id) return
@@ -103,6 +117,27 @@ export default function VideoDetailPage() {
         setLoading(false)
       })
   }, [id])
+
+  useEffect(() => {
+    const fetchYoutubeDetails = async () => {
+      if (!video || !video.publishingHistoryId) return
+
+      try {
+        setYoutubeLoading(true)
+        const stats = await getVideoStatistics(video.publishingHistoryId)
+
+        if (stats) {
+          setYoutubeStats(stats)
+        }
+      } catch (error) {
+        console.error('Failed to fetch YouTube statistics:', error)
+      } finally {
+        setYoutubeLoading(false)
+      }
+    }
+
+    fetchYoutubeDetails()
+  }, [video, getVideoStatistics])
 
   useEffect(() => {
     const videoElement = videoRef.current
@@ -259,11 +294,6 @@ export default function VideoDetailPage() {
     }
   }
 
-  const handleRedirectToUpload = () => {
-    if (!id) return
-    router.push('/media/videos/uploadYoutube/${id}'); // Chuyển hướng đến trang /uploadYoutube
-  };
-
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60)
     const seconds = Math.floor(time % 60)
@@ -335,7 +365,6 @@ export default function VideoDetailPage() {
     )
   }
 
-  
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <MotionBox
@@ -372,7 +401,6 @@ export default function VideoDetailPage() {
 
           <MotionTypography
             variant="h5"
-            // component="h1"
             sx={{
               flexGrow: 1,
               display: { xs: 'none', sm: 'block' },
@@ -738,15 +766,20 @@ export default function VideoDetailPage() {
                     </IconButton>
                   </Typography>
                   <Typography variant="body2" paragraph>
-                    <strong>Status:
-                    <Chip
-                      label={video.status}
-                      size="small"
-                      color={
-                        video.status === 'completed' ? 'success' : 'warning'
-                      }
-                      sx={{ ml: 1, display: 'inline-flex', alignItems: 'center'}}
-                    />
+                    <strong>
+                      Status:
+                      <Chip
+                        label={video.status}
+                        size="small"
+                        color={
+                          video.status === 'completed' ? 'success' : 'warning'
+                        }
+                        sx={{
+                          ml: 1,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                        }}
+                      />
                     </strong>{' '}
                   </Typography>
                 </Box>
@@ -799,7 +832,100 @@ export default function VideoDetailPage() {
 
                 <Divider sx={{ my: 2 }} />
 
-                {/* Thêm thông báo trạng thái tải lên */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    gutterBottom
+                    sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                  >
+                    <YouTube fontSize="small" /> YouTube Publication
+                  </Typography>
+
+                  {youtubeLoading ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={16} />
+                      <Typography variant="body2">
+                        Loading YouTube details...
+                      </Typography>
+                    </Box>
+                  ) : isPublishedToYoutube() ? (
+                    <Box>
+                      <Typography variant="body2" paragraph>
+                        <strong>YouTube Status:</strong> Published
+                      </Typography>
+
+                      <Typography variant="body2" paragraph>
+                        <strong>YouTube URL:</strong>{' '}
+                        <Button
+                          size="small"
+                          href={youtubeStats.youtubeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          variant="text"
+                          color="secondary"
+                          startIcon={<YouTube fontSize="small" />}
+                        >
+                          Open on YouTube
+                        </Button>
+                      </Typography>
+
+                      {youtubeStats.statistics && (
+                        <Box sx={{ mt: 1 }}>
+                          <Typography variant="body2" gutterBottom>
+                            <strong>Statistics:</strong>
+                          </Typography>
+
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              gap: 1,
+                              mt: 1,
+                            }}
+                          >
+                            <Chip
+                              size="small"
+                              label={`Views: ${youtubeStats.statistics.viewCount}`}
+                              variant="outlined"
+                              color="secondary"
+                            />
+                            <Chip
+                              size="small"
+                              label={`Likes: ${youtubeStats.statistics.likeCount}`}
+                              variant="outlined"
+                              color="secondary"
+                            />
+                            <Chip
+                              size="small"
+                              label={`Comments: ${youtubeStats.statistics.commentCount}`}
+                              variant="outlined"
+                              color="secondary"
+                            />
+                          </Box>
+
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: 'block', mt: 1 }}
+                          >
+                            Last updated:{' '}
+                            {new Date(
+                              youtubeStats.statistics.lastUpdated
+                            ).toLocaleString()}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  ) : (
+                    <Typography variant="body2">
+                      This video has not been published to YouTube yet.
+                    </Typography>
+                  )}
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
                 {uploading && (
                   <MotionBox
                     initial={{ opacity: 0 }}
@@ -825,7 +951,6 @@ export default function VideoDetailPage() {
                   </MotionBox>
                 )}
 
-
                 <Box sx={{ mt: 'auto', display: 'flex', gap: 1 }}>
                   <MotionButton
                     variant="contained"
@@ -850,16 +975,33 @@ export default function VideoDetailPage() {
                     <Share />
                   </MotionIconButton>
 
-                  {/* Thêm nút Upload to YouTube */}
-                  <MotionIconButton
-                    color="secondary"
-                    onClick={handleRedirectToUpload}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    sx={{ bgcolor: 'action.hover' }}
+                  <Tooltip
+                    title={
+                      isPublishedToYoutube()
+                        ? 'Already published to YouTube'
+                        : 'Upload to YouTube'
+                    }
                   >
-                    <YouTube />
-                  </MotionIconButton>
+                    <span>
+                      <MotionIconButton
+                        color="secondary"
+                        onClick={handleRedirectToUpload}
+                        whileHover={{
+                          scale: isPublishedToYoutube() ? 1.0 : 1.1,
+                        }}
+                        whileTap={{
+                          scale: isPublishedToYoutube() ? 1.0 : 0.9,
+                        }}
+                        sx={{
+                          bgcolor: 'action.hover',
+                          opacity: isPublishedToYoutube() ? 0.5 : 1,
+                        }}
+                        disabled={isPublishedToYoutube()}
+                      >
+                        <YouTube />
+                      </MotionIconButton>
+                    </span>
+                  </Tooltip>
                 </Box>
               </MotionPaper>
             </Grid>

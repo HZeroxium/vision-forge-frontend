@@ -14,6 +14,9 @@ import {
 } from '@mui/material'
 import LoadingIndicator from '../common/LoadingIndicator'
 import { JobProgress } from '@utils/sse'
+import { motion } from 'framer-motion'
+
+const MotionBox = motion(Box)
 
 interface VideoPreviewStepProps {
   videoUrl: string | null
@@ -33,9 +36,6 @@ const VideoPreviewStep: React.FC<VideoPreviewStepProps> = ({
   const [videoLoadAttempts, setVideoLoadAttempts] = useState(0)
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-
-  // Format the progress percentage
-  const progressPercent = jobProgress ? Math.round(jobProgress.progress) : 0
 
   // Determine if we're showing the progress or the final video
   const showProgress =
@@ -64,34 +64,32 @@ const VideoPreviewStep: React.FC<VideoPreviewStepProps> = ({
     }
   }, [videoError, videoUrl, videoLoadAttempts])
 
-  // Progress status message based on job state
-  const getStatusMessage = () => {
-    if (!jobProgress) return 'Preparing to generate video...'
-
-    switch (jobProgress.state) {
-      case 'waiting':
-        return 'Waiting in queue...'
-      case 'active':
-        if (progressPercent <= 10)
-          return 'Validating script and preparing resources...'
-        if (progressPercent <= 40) return 'Generating audio narration...'
-        if (progressPercent <= 70) return 'Creating images from prompts...'
-        return 'Assembling final video with motion effects...'
-      case 'completed':
-        return videoUrl
-          ? 'Video generation complete!'
-          : 'Finalizing video, please wait...'
-      case 'failed':
-        return `Failed: ${jobProgress.error || 'Unknown error'}`
-      default:
-        return 'Processing...'
-    }
-  }
-
   const handleVideoError = () => {
     console.error('Video loading failed')
     setVideoError('Failed to load the video. Please try again.')
     setIsVideoLoading(false)
+  }
+
+  // Animation variants for the loading bubbles
+  const containerVariants = {
+    animate: {
+      transition: {
+        staggerChildren: 0.3,
+      },
+    },
+  }
+
+  const bubbleVariants = {
+    initial: { scale: 0, opacity: 0 },
+    animate: {
+      scale: [0, 1, 1, 1, 0],
+      opacity: [0, 1, 1, 1, 0],
+      transition: {
+        duration: 2,
+        repeat: Infinity,
+        ease: 'easeInOut',
+      },
+    },
   }
 
   return (
@@ -106,7 +104,7 @@ const VideoPreviewStep: React.FC<VideoPreviewStepProps> = ({
         {showVideo ? 'Video Generated' : 'Generating Video'}
       </Typography>
 
-      {/* Progress Display Section */}
+      {/* Progress Display Section - Simplified with animation */}
       {showProgress && (
         <Paper
           elevation={1}
@@ -118,15 +116,51 @@ const VideoPreviewStep: React.FC<VideoPreviewStepProps> = ({
             mb: 2,
           }}
         >
-          <Stack spacing={2}>
-            <Typography variant="body1" align="center">
-              {getStatusMessage()}
-            </Typography>
+          <Stack spacing={2} alignItems="center">
+            {/* Loading Animation */}
+            <MotionBox
+              variants={containerVariants}
+              initial="initial"
+              animate="animate"
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 2,
+                my: 2,
+                height: 60,
+                alignItems: 'center',
+              }}
+            >
+              {[...Array(5)].map((_, i) => (
+                <MotionBox
+                  key={i}
+                  variants={bubbleVariants}
+                  sx={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: '50%',
+                    backgroundColor: theme.palette.secondary.main,
+                  }}
+                />
+              ))}
+            </MotionBox>
 
+            {/* Indeterminate progress bar */}
             <LinearProgress
-              variant="determinate"
-              value={progressPercent}
-              sx={{ height: 8, borderRadius: 4 }}
+              variant={
+                jobProgress?.state === 'active'
+                  ? 'determinate'
+                  : 'indeterminate'
+              }
+              value={jobProgress?.progress || 0}
+              sx={{
+                height: 8,
+                width: '100%',
+                borderRadius: 4,
+                '& .MuiLinearProgress-bar': {
+                  transition: 'transform 0.5s ease',
+                },
+              }}
             />
 
             <Box
@@ -137,11 +171,16 @@ const VideoPreviewStep: React.FC<VideoPreviewStepProps> = ({
                 gap: 1,
               }}
             >
-              {jobProgress?.state === 'active' && (
-                <CircularProgress size={16} thickness={6} />
-              )}
-              <Typography variant="body2" color="text.secondary">
-                {progressPercent}% complete
+              <Typography
+                variant="body1"
+                color="text.secondary"
+                fontWeight="medium"
+              >
+                {jobProgress?.state === 'waiting'
+                  ? 'Waiting in queue...'
+                  : jobProgress?.state === 'failed'
+                    ? 'Generation failed'
+                    : 'Creating your video...'}
               </Typography>
             </Box>
 
@@ -202,7 +241,25 @@ const VideoPreviewStep: React.FC<VideoPreviewStepProps> = ({
       {/* Completed state but no video yet */}
       {jobProgress?.state === 'completed' && !videoUrl && !showProgress && (
         <Box sx={{ textAlign: 'center', my: 4 }}>
-          <CircularProgress size={40} />
+          <MotionBox
+            animate={{
+              scale: [1, 1.2, 1],
+              rotate: [0, 180, 360],
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+            sx={{
+              width: 60,
+              height: 60,
+              borderRadius: '50%',
+              border: `3px solid ${theme.palette.secondary.main}`,
+              borderTop: `3px solid ${theme.palette.primary.main}`,
+              margin: '0 auto',
+            }}
+          />
           <Typography variant="body1" sx={{ mt: 2 }}>
             Video generated! Retrieving video file...
           </Typography>

@@ -9,11 +9,13 @@ import {
   CardMedia,
   useTheme,
   Fade,
+  Tooltip,
 } from '@mui/material'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import FullscreenIcon from '@mui/icons-material/Fullscreen'
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit'
+import UploadIcon from '@mui/icons-material/Upload'
 import ImageSkeleton from '../../common/ImageSkeleton'
 
 interface ImageCarouselProps {
@@ -26,6 +28,7 @@ interface ImageCarouselProps {
   onNextImage: () => void
   onToggleFullscreen: () => void
   onImageLoad: (index: number) => void
+  onReplaceImage?: () => void // New prop for replacing images
   children: React.ReactNode
 }
 
@@ -39,6 +42,7 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
   onNextImage,
   onToggleFullscreen,
   onImageLoad,
+  onReplaceImage,
   children,
 }) => {
   const theme = useTheme()
@@ -69,22 +73,56 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
           >
             {isRegeneratingImages || loadingImages[currentImageIndex] ? (
               <ImageSkeleton
-                height={isFullscreen ? 500 : 350}
+                height={isFullscreen ? '100%' : 350}
                 width={isFullscreen ? '100%' : { xs: '100%', md: '60%' }}
               />
             ) : (
-              <CardMedia
-                component="img"
-                image={imageUrls[currentImageIndex]}
-                alt={`Generated ${currentImageIndex + 1}`}
+              <Box
                 sx={{
-                  height: isFullscreen ? 500 : 350,
-                  objectFit: 'cover',
                   width: isFullscreen ? '100%' : { xs: '100%', md: '60%' },
-                  transition: 'all 0.3s ease',
+                  aspectRatio: '1/1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  backgroundColor: theme.palette.grey[100],
+                  position: 'relative', // For positioning the upload button
                 }}
-                onLoad={() => onImageLoad(currentImageIndex)}
-              />
+              >
+                <CardMedia
+                  component="img"
+                  image={imageUrls[currentImageIndex]}
+                  alt={`Generated ${currentImageIndex + 1}`}
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    transition: 'all 0.3s ease',
+                  }}
+                  onLoad={() => onImageLoad(currentImageIndex)}
+                />
+
+                {/* Add upload button for replacing image */}
+                {onReplaceImage && (
+                  <Tooltip title="Replace this image">
+                    <IconButton
+                      sx={{
+                        position: 'absolute',
+                        bottom: 10,
+                        right: 10,
+                        backgroundColor: 'rgba(255,255,255,0.7)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(255,255,255,0.9)',
+                        },
+                      }}
+                      onClick={onReplaceImage}
+                      disabled={isRegeneratingImages}
+                    >
+                      <UploadIcon />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Box>
             )}
             <IconButton
               sx={{

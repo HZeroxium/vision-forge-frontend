@@ -2,6 +2,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import * as authService from '../services/authService'
 import type { User } from '../services/authService'
+import { updateProfile } from '../services/userService'
 
 // Define the shape of our auth state
 export interface AuthState {
@@ -57,7 +58,6 @@ export const registerAsync = createAsyncThunk(
   ) => {
     try {
       const user = await authService.register({ email, password, name })
-      // Optionally, you may choose tự động đăng nhập sau khi register
       return { user }
     } catch (error: any) {
       return rejectWithValue(
@@ -164,6 +164,65 @@ export const fetchUserProfile = createAsyncThunk(
       localStorage.removeItem('user')
       return rejectWithValue(
         error.response?.data?.message || 'Failed to fetch user profile'
+      )
+    }
+  }
+)
+
+// Async thunk for Google authentication
+export const setGoogleAuth = createAsyncThunk(
+  'auth/setGoogleAuth',
+  async (token: string, { rejectWithValue }) => {
+    try {
+      // The token is already saved in localStorage in the callback page
+      localStorage.setItem('token', token)
+
+      // Fetch the user profile with the token
+      const user = await authService.getProfile()
+
+      // Store user data in localStorage for persistence
+      localStorage.setItem('user', JSON.stringify(user))
+
+      return { token, user }
+    } catch (error: any) {
+      // Clear invalid authentication data
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      return rejectWithValue(
+        error.response?.data?.message || 'Failed to authenticate with Google'
+      )
+    }
+  }
+)
+
+// Async thunk for updating profile
+export const updateProfileAsync = createAsyncThunk(
+  'auth/updateProfile',
+  async (
+    profileData: { name?: string; description?: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const updatedUser = await updateProfile(profileData)
+
+      // Update user in localStorage
+      const userJson = localStorage.getItem('user')
+      if (userJson) {
+        const user = JSON.parse(userJson)
+        localStorage.setItem(
+          'user',
+          JSON.stringify({
+            ...user,
+            name: updatedUser.name,
+            description: updatedUser.description,
+          })
+        )
+      }
+
+      return updatedUser
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Failed to update profile'
       )
     }
   }
@@ -284,6 +343,43 @@ const authSlice = createSlice({
       })
       .addCase(fetchUserProfile.rejected, (state, action) => {
         state.user = null
+        state.loading = false
+        state.error = action.payload as string
+      })
+      // Handle Google auth
+      .addCase(setGoogleAuth.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(
+        setGoogleAuth.fulfilled,
+        (state, action: PayloadAction<{ token: string; user: User }>) => {
+          state.loading = false
+          state.token = action.payload.token
+          state.user = action.payload.user
+        }
+      )
+      .addCase(setGoogleAuth.rejected, (state, action) => {
+        state.loading = false
+        state.error =
+          (action.payload as string) || 'Google authentication failed'
+      })
+      // Handle updateProfileAsync actions
+      .addCase(updateProfileAsync.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(updateProfileAsync.fulfilled, (state, action) => {
+        state.loading = false
+        if (state.user) {
+          state.user = {
+            ...state.user,
+            name: action.payload.name,
+            description: action.payload.description,
+          }
+        }
+      })
+      .addCase(updateProfileAsync.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload as string
       })

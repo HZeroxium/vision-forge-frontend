@@ -44,7 +44,7 @@ const ThumbnailGallery: React.FC<ThumbnailGalleryProps> = ({
           onClick={() => onThumbnailClick(index)}
           sx={{
             width: 80,
-            height: 60,
+            height: 80,
             flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
@@ -57,7 +57,8 @@ const ThumbnailGallery: React.FC<ThumbnailGalleryProps> = ({
               isRegeneratingImages || loadingImages[index]
                 ? theme.palette.grey[200]
                 : 'transparent',
-            backgroundSize: 'cover',
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
             borderRadius: 1,
             cursor: isRegeneratingImages ? 'default' : 'pointer',

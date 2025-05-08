@@ -1,4 +1,5 @@
 // src/app/flow/generate-video/page.tsx
+
 'use client'
 import React, { useState, useEffect, useRef } from 'react'
 import { Container, Typography, Box, Paper } from '@mui/material'
@@ -6,6 +7,7 @@ import ScriptStep from '@components/flow/ScriptStep'
 import ImagesStep from '@components/flow/ImagesStep'
 import AudioPreviewConfig from '@components/flow/AudioPreviewConfig'
 import VideoPreviewStep from '@components/flow/VideoPreviewStep'
+import SocialUploadStep from '@components/flow/SocialUploadStep'
 import ProgressTracker from '@components/flow/ProgressTracker'
 import StepNavigation from '@components/flow/StepNavigation'
 import PageTransition from '@components/flow/PageTransition'
@@ -19,6 +21,8 @@ import {
   getVideoByScriptId,
 } from '@services/flowService'
 import { subscribeToJobProgress, JobProgress } from '@utils/sse'
+import { Source } from '@/services/scriptsService'
+import { useRouter } from 'next/navigation'
 
 /**
  * Define the steps of the flow.
@@ -27,10 +31,31 @@ import { subscribeToJobProgress, JobProgress } from '@utils/sse'
  * 'audio'    - Audio configuration & preview.
  * 'videoGenerating' - Video is being generated (spinner shown).
  * 'videoGenerated'  - Video is generated and preview is shown.
+ * 'socialUpload'    - Optional step for uploading to social media.
  */
-type Step = 'script' | 'images' | 'audio' | 'videoGenerating' | 'videoGenerated'
+type Step =
+  | 'script'
+  | 'images'
+  | 'audio'
+  | 'videoGenerating'
+  | 'videoGenerated'
+  | 'socialUpload'
+
+export interface ContentStyleOption {
+  displayValue: string
+  backendValue: string
+  label?: string // Optional friendly label for display
+}
+
+const contentStyleMapping: ContentStyleOption[] = [
+  { displayValue: 'default', backendValue: 'phổ thông', label: 'Default' },
+  { displayValue: 'child', backendValue: 'trẻ em', label: 'Child-Friendly' },
+  { displayValue: 'in-depth', backendValue: 'chuyên gia', label: 'In-Depth' },
+]
 
 export default function GenerateVideoFlowPage() {
+  const router = useRouter()
+
   // Step management state
   const [step, setStep] = useState<Step>('script')
   const [previousStep, setPreviousStep] = useState<Step | null>(null)
@@ -43,6 +68,10 @@ export default function GenerateVideoFlowPage() {
   const [selectedContentStyle, setSelectedContentStyle] = useState('default')
   const [selectedLanguage, setSelectedLanguage] = useState('vi')
   const [localContent, setLocalContent] = useState('')
+  const [sources, setSources] = useState<Source[]>([])
+  // Add state for profile description inclusion
+  const [includePersonalDescription, setIncludePersonalDescription] =
+    useState(false)
 
   // State for Step 2 – Images & Scripts Editing
   const [imagesData, setImagesData] = useState<{
@@ -68,6 +97,9 @@ export default function GenerateVideoFlowPage() {
 
   // State for Step 4 – Video Generation/Preview
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
+
+  // State for Step 5 - Social Upload
+  const [videoId, setVideoId] = useState<string | null>(null)
 
   // Global script state from hook
   const { script, createScript, updateScript, deleteScript, resetScriptState } =
@@ -101,13 +133,30 @@ export default function GenerateVideoFlowPage() {
   }, [])
 
   // Dropdown options
-  const contentStyleOptions = ['default', 'child', 'professional', 'in-depth']
+  const contentStyleOptions = contentStyleMapping
+
+  // Function to get backend value from display value
+  const getBackendValue = (displayValue: string): string => {
+    const option = contentStyleMapping.find(
+      (opt) => opt.displayValue === displayValue
+    )
+    return option?.backendValue || displayValue
+  }
+
+  // Function to get display value from backend value
+  const getDisplayValue = (backendValue: string): string => {
+    const option = contentStyleMapping.find(
+      (opt) => opt.backendValue === backendValue
+    )
+    return option?.displayValue || backendValue
+  }
+
   const languageOptions = [
-    { value: 'en', label: 'English' },
     { value: 'vi', label: 'Vietnamese' },
-    { value: 'es', label: 'Spanish' },
-    { value: 'fr', label: 'French' },
-    { value: 'de', label: 'German' },
+    { value: 'en', label: 'English (In development)' },
+    // { value: 'es', label: 'Spanish' },
+    // { value: 'fr', label: 'French' },
+    // { value: 'de', label: 'German' },
   ]
   const audioSpeedOptions = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4]
   const audioInstructionsOptions = ['Clear', 'Dramatic', 'Calm', 'Energetic']
@@ -123,6 +172,7 @@ export default function GenerateVideoFlowPage() {
       'audio',
       'videoGenerating',
       'videoGenerated',
+      'socialUpload',
     ]
     const currentIndex = stepOrder.indexOf(step)
     const newIndex = stepOrder.indexOf(newStep)
@@ -166,7 +216,11 @@ export default function GenerateVideoFlowPage() {
     setLoading(true)
     setIsGeneratingScript(true)
     try {
-      await createScript({ title, style: selectedContentStyle })
+      await createScript({
+        title,
+        style: getBackendValue(selectedContentStyle),
+        includePersonalDescription, // Include this preference in script creation
+      })
     } catch (err: any) {
       setError('Failed to create script')
     } finally {
@@ -178,6 +232,7 @@ export default function GenerateVideoFlowPage() {
   useEffect(() => {
     if (script) {
       setLocalContent(script.content)
+      setSources(script.sources || [])
     }
   }, [script])
 
@@ -199,33 +254,36 @@ export default function GenerateVideoFlowPage() {
     setLoading(true)
 
     try {
+      // Update the script content
       await updateScript(script.id, { content: localContent })
       console.log('Script update successful')
-      // Loại bỏ dòng return result
+
+      // Important: Make sure to retain sources by explicitly updating local state
+      // This ensures the UI shows the sources even after an update
+      if (script.sources) {
+        setSources(script.sources)
+      }
     } catch (err: any) {
       console.error('Failed to update script:', err)
       setError(err.message || 'Failed to update script')
-      throw err // Vẫn giữ throw err để có thể bắt lỗi
+      throw err
     } finally {
       setLoading(false)
     }
   }
 
-  // Tách logic cập nhật script và tạo ảnh thành hàm riêng
   const handleUpdateScriptAndGenerateImages = async () => {
     if (localContent !== script?.content) {
       try {
         await handleUpdateScript()
       } catch (err) {
         console.error('Failed to update script before generating images:', err)
-        // Tiếp tục tạo ảnh ngay cả khi cập nhật script thất bại
       }
     }
 
-    // Chỉ tạo hình ảnh nếu chưa có
     if (!imagesData) {
-      setIsRegeneratingImages(true) // Hiển thị trạng thái loading trong ImagesStep
-      setIsGeneratingInitialImages(true) // Set the initial generation flag
+      setIsRegeneratingImages(true)
+      setIsGeneratingInitialImages(true)
       setError(null)
 
       try {
@@ -239,12 +297,11 @@ export default function GenerateVideoFlowPage() {
         console.error('Error generating images:', err)
       } finally {
         setIsRegeneratingImages(false)
-        setIsGeneratingInitialImages(false) // Clear the initial generation flag
+        setIsGeneratingInitialImages(false)
       }
     }
   }
 
-  // Giữ lại handleProceedToImages nhưng sửa lại để gọi hàm mới
   const handleProceedToImages = async () => {
     navigateToStep('images')
     handleUpdateScriptAndGenerateImages()
@@ -278,23 +335,38 @@ export default function GenerateVideoFlowPage() {
     }
   }
 
+  // Handle saving all scripts and image reordering
+  const handleSaveAllScripts = async (
+    scripts: string[],
+    imageUrls: string[]
+  ) => {
+    if (imagesData) {
+      // Update imagesData with the new scripts and potentially reordered image URLs
+      setImagesData({
+        ...imagesData,
+        scripts: scripts,
+        image_urls: imageUrls,
+      })
+      return true
+    }
+    return false
+  }
+
   // --- STEP NAVIGATION HANDLERS ---
   const handleNextStep = () => {
     if (step === 'script' && script) {
-      // Ngay lập tức chuyển sang bước Images
       navigateToStep('images')
-
-      // Sau đó bắt đầu quá trình cập nhật script và tạo hình ảnh
       handleUpdateScriptAndGenerateImages()
     } else if (
       step === 'images' &&
       !isGeneratingInitialImages &&
       !isRegeneratingImages
     ) {
-      // Only proceed if images are not being generated
       navigateToStep('audio')
     } else if (step === 'audio') {
       handleProceedToVideo()
+    } else if (step === 'videoGenerated') {
+      handleProceedToSocialUpload()
     }
   }
 
@@ -303,6 +375,8 @@ export default function GenerateVideoFlowPage() {
       navigateToStep('script')
     } else if (step === 'audio') {
       navigateToStep('images')
+    } else if (step === 'socialUpload') {
+      navigateToStep('videoGenerated')
     }
   }
 
@@ -314,20 +388,18 @@ export default function GenerateVideoFlowPage() {
     setLoading(true)
     setError(null)
     setJobProgress(null)
-    setVideoUrl(null) // Reset video URL when starting a new generation
+    setVideoUrl(null)
 
     try {
-      // Start the video generation job
       const jobResponse = await startVideoGenerationJob({
         scriptId: script.id,
         imageUrls: imagesData.image_urls,
         scripts: imagesData.scripts,
+        voice: audioVoice,
       })
 
       setCurrentJobId(jobResponse.jobId)
 
-      // Use a ref object instead of a normal variable to track completion
-      // This ensures the latest value is always used in the callback
       const jobCompletionRef = { completed: false }
 
       const cleanup = subscribeToJobProgress(
@@ -338,12 +410,10 @@ export default function GenerateVideoFlowPage() {
           )
           setJobProgress(progress)
 
-          // Only process completion once and only if we haven't already
           if (progress.state === 'completed' && !jobCompletionRef.completed) {
             console.log('Job completed, fetching video details')
             jobCompletionRef.completed = true
 
-            // Get the video URL from the completed job
             fetchCompletedVideo(jobResponse.jobId)
               .then(() => {
                 navigateToStep('videoGenerated')
@@ -373,12 +443,10 @@ export default function GenerateVideoFlowPage() {
     }
   }
 
-  // Function to fetch the final video from a completed job
   const fetchCompletedVideo = async (jobId: string) => {
     if (!script || !imagesData) return
 
     try {
-      // Get job status to get the video reference
       const jobStatus = await getJobStatus(jobId)
       console.log('Job status:', jobStatus)
 
@@ -386,15 +454,15 @@ export default function GenerateVideoFlowPage() {
         throw new Error('Job is not completed')
       }
 
-      // The backend might include the video information directly in the job result
       if (jobStatus.result && jobStatus.result.url) {
         console.log('Setting video URL from job result:', jobStatus.result.url)
         setVideoUrl(jobStatus.result.url)
+        if (jobStatus.result.id) {
+          setVideoId(jobStatus.result.id)
+        }
         return jobStatus.result
       }
 
-      // If no direct video URL in job result, get the video by script ID
-      // instead of calling generateVideoFlow which creates a new video
       console.log('Fetching video using script ID')
       const videoResponse = await getVideoByScriptId(script.id)
 
@@ -404,6 +472,7 @@ export default function GenerateVideoFlowPage() {
 
       console.log('Setting video URL:', videoResponse.url)
       setVideoUrl(videoResponse.url)
+      setVideoId(videoResponse.id)
       return videoResponse
     } catch (err) {
       console.error('Failed to fetch video for completed job:', err)
@@ -414,7 +483,6 @@ export default function GenerateVideoFlowPage() {
 
   // --- Reset Flow Handler ---
   const handleReset = () => {
-    // Clean up any existing SSE connection
     if (sseCleanupRef.current) {
       sseCleanupRef.current()
       sseCleanupRef.current = null
@@ -422,22 +490,34 @@ export default function GenerateVideoFlowPage() {
 
     setTitle('')
     setSelectedContentStyle('default')
-    setSelectedLanguage('en')
+    setSelectedLanguage('vi')
     setLocalContent('')
     setImagesData(null)
     setVideoUrl(null)
+    setVideoId(null)
     setPreviewAudioUrl(null)
-    setAudioVoice('alloy') // Reset to default voice
+    setAudioVoice('alloy')
     navigateToStep('script')
     resetScriptState()
     setCurrentJobId(null)
     setJobProgress(null)
   }
 
-  // Determine if Next button should be disabled
+  const handleProceedToSocialUpload = () => {
+    navigateToStep('socialUpload')
+  }
+
+  const handleSkipSocialUpload = () => {
+    handleReset()
+    router.push('/media/videos')
+  }
+
   const isNextDisabled = () => {
     if (step === 'script') {
-      return !script // Disable if no script exists
+      return !script
+    }
+    if (step === 'videoGenerated') {
+      return !videoUrl
     }
     return false
   }
@@ -455,12 +535,6 @@ export default function GenerateVideoFlowPage() {
           {error}
         </Typography>
       )}
-
-      {/* {loading && (
-        <Box display="flex" justifyContent="center" sx={{ my: 2 }}>
-          <LoadingIndicator isLoading={false} size={24} />
-        </Box>
-      )} */}
 
       <Paper
         elevation={3}
@@ -492,6 +566,9 @@ export default function GenerateVideoFlowPage() {
             languageOptions={languageOptions}
             onReset={handleReset}
             isGeneratingScript={isGeneratingScript}
+            sources={sources}
+            includePersonalDescription={includePersonalDescription}
+            setIncludePersonalDescription={setIncludePersonalDescription}
           />
         </PageTransition>
 
@@ -505,7 +582,8 @@ export default function GenerateVideoFlowPage() {
             onRegenerateImages={handleRegenerateImages}
             onProceedToAudio={() => navigateToStep('audio')}
             isRegeneratingImages={isRegeneratingImages}
-            isGeneratingInitialImages={isGeneratingInitialImages} // Pass the new prop
+            isGeneratingInitialImages={isGeneratingInitialImages}
+            onSaveAllScripts={handleSaveAllScripts}
           />
         </PageTransition>
 
@@ -541,6 +619,18 @@ export default function GenerateVideoFlowPage() {
             isGenerating={step === 'videoGenerating'}
           />
         </PageTransition>
+
+        <PageTransition
+          isVisible={step === 'socialUpload'}
+          direction={transitionDirection}
+        >
+          <SocialUploadStep
+            videoId={videoId}
+            videoUrl={videoUrl}
+            onSkip={handleSkipSocialUpload}
+            onComplete={handleReset}
+          />
+        </PageTransition>
       </Paper>
 
       <StepNavigation
@@ -548,8 +638,20 @@ export default function GenerateVideoFlowPage() {
         onPrevious={handlePreviousStep}
         onNext={handleNextStep}
         disableNext={isNextDisabled()}
-        nextLabel={step === 'audio' ? 'Generate Video' : 'Next Step'}
-        isGeneratingImages={isRegeneratingImages || isGeneratingInitialImages} // Pass combined state
+        nextLabel={
+          step === 'videoGenerated'
+            ? 'Upload to Social Media'
+            : step === 'audio'
+              ? 'Generate Video'
+              : 'Next Step'
+        }
+        showNext={step !== 'socialUpload' && step !== 'videoGenerating'}
+        showPrevious={
+          step !== 'script' &&
+          step !== 'videoGenerating' &&
+          step !== 'socialUpload'
+        }
+        isGeneratingImages={isRegeneratingImages || isGeneratingInitialImages}
       />
     </Container>
   )

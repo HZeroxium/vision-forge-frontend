@@ -1,6 +1,6 @@
 'use client'
 import React from 'react'
-import { Box, Divider } from '@mui/material'
+import { Box, Divider, alpha, useTheme } from '@mui/material'
 import SidebarHeader from './SidebarHeader'
 import UserProfile from './UserProfile'
 import RouteGroup, { RouteItem } from './RouteGroup'
@@ -32,14 +32,23 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   onDrawerToggle,
   onSectionToggle,
 }) => {
+  const theme = useTheme()
+
   return (
     <Box
       sx={{
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        backgroundColor: 'background.paper',
-        boxShadow: '0 0 20px rgba(0,0,0,0.05)',
+        backgroundImage:
+          theme.palette.mode === 'dark'
+            ? `linear-gradient(180deg, ${alpha(theme.palette.background.paper, 0.95)} 0%, ${alpha(theme.palette.background.default, 0.9)} 100%)`
+            : `linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,250,250,0.95) 100%)`,
+        borderRadius: isMobile ? '0 16px 16px 0' : 0,
+        boxShadow: isMobile
+          ? 'none'
+          : `inset -1px 0 0 ${alpha(theme.palette.divider, 0.1)}`,
+        backdropFilter: 'blur(8px)',
         position: 'relative',
         zIndex: (theme) => theme.zIndex.drawer,
         overflowX: 'hidden',
@@ -52,13 +61,25 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         isMobile={isMobile}
       />
 
-      <Divider />
+      <Divider
+        sx={{
+          opacity: 0.6,
+          borderColor: alpha(theme.palette.divider, 0.1),
+          my: 0.5,
+        }}
+      />
 
       {/* User profile section (if logged in) */}
       {user && (
         <>
           <UserProfile user={user} open={open} />
-          <Divider />
+          <Divider
+            sx={{
+              opacity: 0.6,
+              borderColor: alpha(theme.palette.divider, 0.1),
+              my: 0.5,
+            }}
+          />
         </>
       )}
 
@@ -75,9 +96,14 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
             background: 'transparent',
           },
           '&::-webkit-scrollbar-thumb': {
-            background: (theme) => theme.palette.divider,
+            background: alpha(theme.palette.primary.main, 0.2),
             borderRadius: '4px',
           },
+          '&::-webkit-scrollbar-thumb:hover': {
+            background: alpha(theme.palette.primary.main, 0.3),
+          },
+          px: 0.5,
+          py: 1,
         }}
       >
         {routes.map((group) => (
