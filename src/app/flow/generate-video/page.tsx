@@ -395,6 +395,7 @@ export default function GenerateVideoFlowPage() {
         scriptId: script.id,
         imageUrls: imagesData.image_urls,
         scripts: imagesData.scripts,
+        voice: audioVoice,
       })
 
       setCurrentJobId(jobResponse.jobId)

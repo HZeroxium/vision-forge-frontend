@@ -342,7 +342,7 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
             </Box>
 
             {/* Add the Proceed to Images button */}
-            <Button
+            {/* <Button
               variant="contained"
               color="primary"
               onClick={handleProceedToImages}
@@ -350,7 +350,7 @@ const ScriptStep: React.FC<ScriptStepProps> = ({
               endIcon={<NavigateNextIcon />}
             >
               Proceed to Images
-            </Button>
+            </Button> */}
           </Box>
 
           {/* Sources List - Always display if sources exist */}

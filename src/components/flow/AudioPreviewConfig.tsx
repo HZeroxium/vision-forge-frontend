@@ -637,7 +637,7 @@ const AudioPreviewConfig: React.FC<AudioPreviewConfigProps> = ({
       <Divider sx={{ my: 2 }} />
 
       {/* Proceed button */}
-      <Button
+      {/* <Button
         variant="contained"
         color="primary"
         onClick={onProceedToVideo}
@@ -645,7 +645,7 @@ const AudioPreviewConfig: React.FC<AudioPreviewConfigProps> = ({
         sx={{ alignSelf: 'flex-end', mt: 2 }}
       >
         Proceed to Video Generation
-      </Button>
+      </Button> */}
     </Box>
   )
 }

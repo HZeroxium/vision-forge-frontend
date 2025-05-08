@@ -89,7 +89,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
       </Box>
 
       {/* Proceed Button */}
-      <Button
+      {/* <Button
         variant="contained"
         color="primary"
         onClick={onProceedToAudio}
@@ -97,7 +97,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
         endIcon={<NavigateNextIcon />}
       >
         Proceed to Audio
-      </Button>
+      </Button> */}
     </Box>
   )
 }
